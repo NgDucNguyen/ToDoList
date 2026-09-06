@@ -8,7 +8,7 @@
   </head>
   <body>
     <div class="dashboard-layout">
-      <!-- Khối Slidebar bên trái -->
+      <!-- Khối Sidebar bên trái -->
       <aside class="sidebar">
         <div class="sidebar-top">
           <h1 class="brand-title">MY DAILY PLANNER</h1>
@@ -35,8 +35,8 @@
             <span class="icon">⚙️</span> Settings
           </div>
           <div class="user-infor">
-            <div class="avatar">A</div>
-            <span class="username">Nguyen Duc</span>
+            <div class="avatar">N</div>
+            <span class="username">NgDucNguyen</span>
           </div>
         </div>
       </aside>
@@ -65,7 +65,7 @@
           </div>
         </header>
 
-        <!-- -- Tiêu đề thứ trong tuần -- -->
+        <!-- Tiêu đề thứ trong tuần -->
         <div class="calendar-card">
           <div class="weekdays-bar">
             <div>Thứ 2</div>
@@ -81,7 +81,28 @@
       </main>
     </div>
 
-    <!-- --Thêm/sửa công việc-- -->
+    <!-- POP-UP XEM TẤT CẢ CÔNG VIỆC TRONG NGÀY -->
+    <div id="day-details-modal" class="modal-backdrop hidden">
+      <div class="modal-card day-details-card">
+        <div class="modal-header">
+          <div>
+            <h3 id="day-details-title">Danh sách công việc</h3>
+            <span id="day-details-subtitle" class="text-muted-sm">Ngày: --/--/----</span>
+          </div>
+          <button id="close-day-details-btn" class="close-x-btn">✕</button>
+        </div>
+
+        <!-- Danh sách việc chi tiết của ngày -->
+        <div id="day-details-task-list" class="day-details-task-list"></div>
+
+        <div class="modal-actions space-between">
+          <button type="button" id="day-details-add-btn" class="btn-primary">+ Thêm việc ngày này</button>
+          <button type="button" id="day-details-close-btn" class="btn-outline">Đóng</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- POP-UP THÊM/SỬA CÔNG VIỆC -->
     <div id="task-modal" class="modal-backdrop hidden">
       <div class="modal-card">
         <div class="modal-header">
@@ -98,25 +119,20 @@
               type="text"
               id="task-text-input"
               name="taskTitle"
-              placeholder="Ví dụ: Team Sync, Ship groceries..."
+              placeholder="Ví dụ: Học, chơi, Game"
               required
               autofocus
             />
           </div>
 
-          <!-- [MỚI] Hàng nhập ngày và giờ cụ thể -->
+          <!-- Hàng nhập ngày và giờ cụ thể -->
           <div class="form-row">
             <div class="form-group">
               <label for="task-date-picker">Ngày</label>
-              <input
-                type="date"
-                id="task-date-picker"
-                name="taskDate"
-                required
-              />
+              <input type="date" id="task-date-picker" name="taskDate" required />
             </div>
             <div class="form-group">
-              <label for="task-time-input">Thời gian (tùy chọn)</label>
+              <label for="task-time-input">Thời gian</label>
               <input
                 type="text"
                 id="task-time-input"
@@ -126,9 +142,9 @@
             </div>
           </div>
 
-          <!-- [MỚI] Menu chọn nhãn phân loại tag pastel -->
+          <!-- Nhãn Tag công việc -->
           <div class="form-group">
-            <label for="task-tag-input">Nhãn phân loại (Tag)</label>
+            <label for="task-tag-input">Nhãn (Tag)</label>
             <select id="task-tag-input" name="taskTag">
               <option value="Work">Work (Xanh lá)</option>
               <option value="Design">Design (Xanh biển)</option>
