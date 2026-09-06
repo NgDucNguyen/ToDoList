@@ -87,7 +87,9 @@
         <div class="modal-header">
           <div>
             <h3 id="day-details-title">Danh sách công việc</h3>
-            <span id="day-details-subtitle" class="text-muted-sm">Ngày: --/--/----</span>
+            <span id="day-details-subtitle" class="text-muted-sm"
+              >Ngày: --/--/----</span
+            >
           </div>
           <button id="close-day-details-btn" class="close-x-btn">✕</button>
         </div>
@@ -96,8 +98,12 @@
         <div id="day-details-task-list" class="day-details-task-list"></div>
 
         <div class="modal-actions space-between">
-          <button type="button" id="day-details-add-btn" class="btn-primary">+ Thêm việc ngày này</button>
-          <button type="button" id="day-details-close-btn" class="btn-outline">Đóng</button>
+          <button type="button" id="day-details-add-btn" class="btn-primary">
+            + Thêm việc ngày này
+          </button>
+          <button type="button" id="day-details-close-btn" class="btn-outline">
+            Đóng
+          </button>
         </div>
       </div>
     </div>
@@ -129,7 +135,12 @@
           <div class="form-row">
             <div class="form-group">
               <label for="task-date-picker">Ngày</label>
-              <input type="date" id="task-date-picker" name="taskDate" required />
+              <input
+                type="date"
+                id="task-date-picker"
+                name="taskDate"
+                required
+              />
             </div>
             <div class="form-group">
               <label for="task-time-input">Thời gian</label>
@@ -146,10 +157,12 @@
           <div class="form-group">
             <label for="task-tag-input">Nhãn (Tag)</label>
             <select id="task-tag-input" name="taskTag">
-              <option value="Work">Work (Xanh lá)</option>
-              <option value="Design">Design (Xanh biển)</option>
-              <option value="Dev">Dev (Tím)</option>
-              <option value="Personal">Personal (Cam)</option>
+              <option value="Daily">Daily (Xanh lá)</option>
+              <option value="Study">Study (Xanh biển)</option>
+              <option value="Work">Work (Tím)</option>
+              <option value="Project">Project (Cam)</option>
+              <option value="Personal">Personal (Đỏ)</option>
+              <option value="Other">Other (Hồng)</option>
             </select>
           </div>
 

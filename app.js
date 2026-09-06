@@ -1,6 +1,4 @@
-// =============================================================================
-// PHẦN 1: QUẢN LÝ DỮ LIỆU & STATE
-// =============================================================================
+//Hardcode data
 
 const sampleTasks = [
   {
@@ -54,9 +52,7 @@ function saveTasks() {
 let viewDate = new Date();
 let currentSelectedDate = ""; // Ngày đang xem chi tiết trên pop-up
 
-// =============================================================================
-// PHẦN 2: LIÊN KẾT DOM ELEMENTS
-// =============================================================================
+// Lấy các element
 
 const monthYearLabel = document.getElementById("current-month-year");
 const calendarGrid = document.getElementById("calendar-grid");
@@ -75,7 +71,7 @@ const taskDatePicker = document.getElementById("task-date-picker");
 const taskTimeInput = document.getElementById("task-time-input");
 const taskTagInput = document.getElementById("task-tag-input");
 
-// [MỚI] DOM Pop-up xem chi tiết ngày
+// DOM Pop-up xem chi tiết ngày
 const dayDetailsModal = document.getElementById("day-details-modal");
 const dayDetailsTitle = document.getElementById("day-details-title");
 const dayDetailsSubtitle = document.getElementById("day-details-subtitle");
@@ -84,9 +80,7 @@ const closeDayDetailsBtn = document.getElementById("close-day-details-btn");
 const dayDetailsCloseBtn = document.getElementById("day-details-close-btn");
 const dayDetailsAddBtn = document.getElementById("day-details-add-btn");
 
-// =============================================================================
-// PHẦN 3: HÀM HỖ TRỢ
-// =============================================================================
+// Định dạng ngày chuẩn
 
 function formatDateString(date) {
   const y = date.getFullYear();
@@ -95,9 +89,7 @@ function formatDateString(date) {
   return `${y}-${m}-${d}`;
 }
 
-// =============================================================================
-// PHẦN 4: DỰNG BẢNG LỊCH (CALENDAR ENGINE)
-// =============================================================================
+//Dựng bảng lịch
 
 function renderCalendar() {
   calendarGrid.innerHTML = "";
@@ -247,9 +239,7 @@ function createTaskItem(task, isInsideModal = false) {
   return item;
 }
 
-// =============================================================================
-// PHẦN 5: POP-UP CHI TIẾT CÔNG VIỆC TRONG NGÀY (DAY DETAILS MODAL)
-// =============================================================================
+//Pop-up xem chi tiet
 
 function openDayDetailsModal(dateStr) {
   currentSelectedDate = dateStr;
@@ -285,9 +275,7 @@ dayDetailsAddBtn.addEventListener("click", () => {
   openTaskModal(currentSelectedDate);
 });
 
-// =============================================================================
-// PHẦN 6: MODAL NHẬP LIỆU (ADD TASK)
-// =============================================================================
+//Nhập liệu
 
 function openTaskModal(defaultDate = "") {
   taskDatePicker.value = defaultDate || formatDateString(new Date());
@@ -328,9 +316,7 @@ taskForm.addEventListener("submit", (e) => {
   renderCalendar();
 });
 
-// =============================================================================
-// PHẦN 7: ĐIỀU HƯỚNG & KHỞI CHẠY
-// =============================================================================
+// Khởi chạy
 
 prevMonthBtn.addEventListener("click", () => {
   viewDate.setMonth(viewDate.getMonth() - 1);
