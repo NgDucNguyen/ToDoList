@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendar To-Do-List</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- <-- header dieu khien thang -->
+
+      <header class="calendar-header">
+        <div class="nav-controls">
+          <button id="prev-month-btn" class="btn-nav">&lt</button>
+          <h2 id="current-month-year">Tháng --, ----</h2>
+          <button id="next-month-btn" class="btn-nav">&gt</button>
+        </div>
+        <button id="today-btn" class="btn-secondary">Hôm nay</button>
+      </header>
+
+      <!-- -- Tiêu đề thứ trong tuần -- -->
+      <div class="weekdays-grid">
+        <div>Thứ 2</div>
+        <div>Thứ 3</div>
+        <div>Thứ 4</div>
+        <div>Thứ 5</div>
+        <div>Thứ 6</div>
+        <div>Thứ 7</div>
+        <div>Chủ nhật</div>
+      </div>
+
+      <!-- --Khung lưới chứa các ngày và task-- -->
+      <main id="calendar-grid" class="calendar-grid"></main>
+    </div>
+
+    <!-- --Thêm/sửa công việc-- -->
+    <div id="task-modal" class="modal-backdrop hidden">
+      <div class="modal-card">
+        <h3 id="modal-title">Thêm công việc</h3>
+        <p id="modal-date-label" class="modal-subtitle">Ngày: --/--/----</p>
+
+        <form id="task-form">
+          <input type="hidden" id="task-date-input" />
+          <input type="hidden" id="task-id-input" />
+
+          <div class="form-group">
+            <label for="task-text-input">Nội dung công việc:</label>
+            <input
+              type="text"
+              id="task-text-input"
+              placeholder="Nhập công việc cần làm"
+              required
+              autofocus
+            />
+          </div>
+
+          <div class="modal-action">
+            <button type="button" id="cancel-task-btn" class="btn-secondary">
+              Hủy
+            </button>
+            <button type="submit" class="btn-primary">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
