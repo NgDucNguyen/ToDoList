@@ -89,6 +89,15 @@ function formatDateString(date) {
   return `${y}-${m}-${d}`;
 }
 
+// Thuật toán sắp xếp task theo giờ
+function sortTaskByTime(taskList) {
+  return taskList.sort((a, b) => {
+    if (a.time && b.time) return a.time.localeCompare(b.time);
+    if (a.time && !b.time) return -1;
+    if (!a.time && b.time) return 1;
+    return 0;
+  });
+}
 //Dựng bảng lịch
 
 function renderCalendar() {
@@ -164,7 +173,8 @@ function createDayCell(dateObj, isOtherMonth, isToday = false) {
   const taskList = document.createElement("div");
   taskList.className = "task-list";
 
-  const dayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const rawDayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const dayTasks = sortTaskByTime(rawDayTasks);
 
   // Chỉ hiện tối đa 2 việc đầu tiên trên ô để không sinh thanh cuộn
   const MAX_VISIBLE_TASKS = 2;
@@ -250,7 +260,8 @@ function openDayDetailsModal(dateStr) {
 
 function renderDayDetailsList(dateStr) {
   dayDetailsTaskList.innerHTML = "";
-  const dayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const rawDayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const dayTasks = sortTaskByTime(rawDayTasks);
 
   if (dayTasks.length === 0) {
     dayDetailsTaskList.innerHTML = `<div class="empty-day-state">Chưa có công việc nào trong ngày này.</div>`;
@@ -304,7 +315,7 @@ taskForm.addEventListener("submit", (e) => {
     id: Date.now().toString(),
     title: title,
     task_date: dateStr,
-    time: taskTimeInput.value.trim(),
+    time: taskTimeInput.value,
     tag: taskTagInput.value,
     is_completed: false,
     created_at: new Date().toISOString(),

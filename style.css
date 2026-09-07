@@ -584,3 +584,21 @@ select:focus {
   font-size: 0.85rem;
   padding: 20px 0;
 }
+
+/* Ngày âm */
+.day-number-wrapper {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.lunar-num {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #94a3b8; /* Màu xám nhạt */
+}
+
+.day-cell.today .lunar-num {
+  color: #2563eb; /* Ngày hôm nay thì đổi sang màu xanh */
+  font-weight: 600;
+}
