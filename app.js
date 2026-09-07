@@ -4,7 +4,7 @@ const sampleTasks = [
   {
     id: "1",
     title: "Team Sync",
-    time: "8:00 AM",
+    time: "8:00",
     tag: "Work",
     task_date: "2026-09-07",
     is_completed: false,
@@ -12,7 +12,7 @@ const sampleTasks = [
   {
     id: "2",
     title: "Status Update",
-    time: "9:30 AM",
+    time: "9:30",
     tag: "Dev",
     task_date: "2026-09-08",
     is_completed: false,
@@ -20,7 +20,7 @@ const sampleTasks = [
   {
     id: "3",
     title: "UX Review",
-    time: "1:30 PM",
+    time: "1:30",
     tag: "Design",
     task_date: "2026-09-08",
     is_completed: false,
@@ -28,7 +28,7 @@ const sampleTasks = [
   {
     id: "4",
     title: "Ship groceries",
-    time: "5:00 PM",
+    time: "5:00",
     tag: "Personal",
     task_date: "2026-09-11",
     is_completed: false,
@@ -166,7 +166,7 @@ function createDayCell(dateObj, isOtherMonth, isToday = false) {
 
   const dayTasks = tasks.filter((t) => t.task_date === dateStr);
 
-  // [CẢI TIẾN] Chỉ hiện tối đa 2 việc đầu tiên trên ô để không sinh thanh cuộn
+  // Chỉ hiện tối đa 2 việc đầu tiên trên ô để không sinh thanh cuộn
   const MAX_VISIBLE_TASKS = 2;
   const visibleTasks = dayTasks.slice(0, MAX_VISIBLE_TASKS);
   visibleTasks.forEach((task) => {
