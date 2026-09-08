@@ -52,6 +52,9 @@ function saveTasks() {
 let viewDate = new Date();
 let currentSelectedDate = ""; // Ngày đang xem chi tiết trên pop-up
 
+let editingTaskId = null;
+const modalTitle = document.getElementById("modal-title");
+const saveTaskBtn = document.getElementById("save-task-btn");
 // Lấy các element
 
 const monthYearLabel = document.getElementById("current-month-year");
@@ -218,6 +221,7 @@ function createDayCell(dateObj, isOtherMonth, isToday = false) {
 function createTaskItem(task, isInsideModal = false) {
   const item = document.createElement("div");
   item.className = `task-item ${task.is_completed ? "completed" : ""}`;
+  item.style.cursor = "pointer"; // Đổi con trỏ chuột thành hình bàn tay
 
   item.innerHTML = `
     <div class="task-meta">
@@ -227,15 +231,23 @@ function createTaskItem(task, isInsideModal = false) {
     <div class="task-body">
       <input type="checkbox" ${task.is_completed ? "checked" : ""}>
       <span class="task-title" title="${task.title}">${task.title}</span>
-      <button class="task-del-btn" title="Xóa">✕</button>
+      <button class="task-del-btn" title="Xóa">✕</button>  
     </div>
   `;
 
-  // Ngăn click vào checkbox/nút xóa kích hoạt sự kiện click của ô ngày
-  item.addEventListener("click", (e) => e.stopPropagation());
+  // [SỬA TẠI ĐÂY]: Bấm thẳng vào thẻ công việc là mở form sửa ngay
+  item.addEventListener("click", (e) => {
+    e.stopPropagation(); // Không kích hoạt click vào ô ngày
+    if (isInsideModal) {
+      closeDayDetailsModal();
+    }
+    openTaskModal("", task); // Đổ dữ liệu công việc này lên form để sửa
+  });
 
-  // Đổi trạng thái hoàn thành
-  item.querySelector("input").addEventListener("change", (e) => {
+  // Chặn checkbox không cho mở popup sửa khi chỉ muốn tích hoàn thành
+  const checkbox = item.querySelector("input");
+  checkbox.addEventListener("click", (e) => e.stopPropagation());
+  checkbox.addEventListener("change", (e) => {
     task.is_completed = e.target.checked;
     saveTasks();
     renderCalendar();
@@ -244,8 +256,9 @@ function createTaskItem(task, isInsideModal = false) {
     }
   });
 
-  // Xóa việc
-  item.querySelector(".task-del-btn").addEventListener("click", (e) => {
+  // Chặn nút xóa không cho mở popup sửa khi ấn xóa
+  const delBtn = item.querySelector(".task-del-btn");
+  delBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     tasks = tasks.filter((t) => t.id !== task.id);
     saveTasks();
@@ -297,10 +310,25 @@ dayDetailsAddBtn.addEventListener("click", () => {
 
 //Nhập liệu
 
-function openTaskModal(defaultDate = "") {
-  taskDatePicker.value = defaultDate || formatDateString(new Date());
-  taskTextInput.value = "";
-  taskTimeInput.value = "";
+function openTaskModal(defaultDate = "", taskToEdit = null) {
+  if (taskToEdit) {
+    editingTaskId = taskToEdit.id;
+    if (modalTitle) modalTitle.textContent = "Sửa việc";
+    if (saveTaskBtn) saveTaskBtn.textContent = "Lưu";
+    taskTextInput.value = taskToEdit.title;
+    taskDatePicker.value = taskToEdit.task_date;
+    taskTimeInput.value = taskToEdit.time || "";
+    taskTagInput.value = taskToEdit.tag || "Daily";
+  } else {
+    editingTaskId = null;
+    if (modalTitle) modalTitle.textContent = "Thêm công việc mới";
+    if (saveTaskBtn) saveTaskBtn.textContent = "Lưu";
+    taskDatePicker.value = defaultDate || formatDateString(new Date());
+    taskTimeInput.value = "";
+    taskTextInput.value = "";
+    taskTagInput.value = "Daily";
+  }
+
   taskModal.classList.remove("hidden");
   taskTextInput.focus();
 }
@@ -320,17 +348,26 @@ taskForm.addEventListener("submit", (e) => {
 
   if (!title || !dateStr) return;
 
-  const newTask = {
-    id: Date.now().toString(),
-    title: title,
-    task_date: dateStr,
-    time: taskTimeInput.value,
-    tag: taskTagInput.value,
-    is_completed: false,
-    created_at: new Date().toISOString(),
-  };
-
-  tasks.push(newTask);
+  if (editingTaskId) {
+    const targetTask = tasks.find((t) => t.id === editingTaskId);
+    if (targetTask) {
+      targetTask.title = title;
+      targetTask.task_date = dateStr;
+      targetTask.time = taskTimeInput.value;
+      targetTask.tag = taskTagInput.value;
+    }
+  } else {
+    const newTask = {
+      id: Date.now().toString(),
+      title: title,
+      task_date: dateStr,
+      time: taskTimeInput.value,
+      tag: taskTagInput.value,
+      is_completed: false,
+      created_at: new Date().toISOString(),
+    };
+    tasks.push(newTask);
+  }
   saveTasks();
   closeTaskModal();
   renderCalendar();

@@ -451,17 +451,41 @@ body {
   display: inline-block;
 }
 
+/* Bọc cả nút Sửa và Xóa */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.task-edit-btn,
 .task-del-btn {
   display: none;
   border: none;
   background: none;
-  color: #ef4444;
   cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.task-edit-btn {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.task-edit-btn:hover {
+  color: #2563eb;
+}
+
+.task-del-btn {
+  color: #ef4444;
   font-size: 0.7rem;
 }
 
+.task-item:hover .task-edit-btn,
 .task-item:hover .task-del-btn {
-  display: inline;
+  display: inline-block;
 }
 
 .more-tasks-btn {
