@@ -79,6 +79,11 @@ const dayDetailsModal = document.getElementById("day-details-modal");
 const dayDetailsTitle = document.getElementById("day-details-title");
 const dayDetailsSubtitle = document.getElementById("day-details-subtitle");
 const dayDetailsTaskList = document.getElementById("day-details-task-list");
+
+const batteryFill = document.getElementById("battery-fill");
+const batteryPercent = document.getElementById("battery-percent");
+const progressCount = document.getElementById("progress-count");
+
 const closeDayDetailsBtn = document.getElementById("close-day-details-btn");
 const dayDetailsCloseBtn = document.getElementById("day-details-close-btn");
 const dayDetailsAddBtn = document.getElementById("day-details-add-btn");
@@ -280,7 +285,30 @@ function openDayDetailsModal(dateStr) {
   dayDetailsModal.classList.remove("hidden");
 }
 
+// Ham cap nhật thanh pin
+function updateDayProgress(dateStr) {
+  const dayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const total = dayTasks.length;
+  const completed = dayTasks.filter((t) => t.is_completed).length;
+
+  if (total === 0) {
+    if (batteryFill) batteryFill.style.width = "0%";
+    if (batteryPercent) batteryPercent.textContent = "0%";
+    if (progressCount) progressCount.textContent = "0/0";
+    return;
+  }
+
+  const percent = Math.round((completed / total) * 100);
+
+  if (batteryFill) batteryFill.style.width = `${percent}%`;
+  if (batteryPercent) batteryPercent.textContent = `${percent}%`;
+  if (progressCount) progressCount.textContent = `${completed}/${total}`;
+}
+
 function renderDayDetailsList(dateStr) {
+  // Cập nhật tiến độ hàng ngày
+  updateDayProgress(dateStr);
+
   dayDetailsTaskList.innerHTML = "";
   const rawDayTasks = tasks.filter((t) => t.task_date === dateStr);
   const dayTasks = sortTaskByTime(rawDayTasks);

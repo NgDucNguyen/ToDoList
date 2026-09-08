@@ -524,7 +524,7 @@ body {
 .modal-card {
   background: var(--bg-white);
   border-radius: 12px;
-  width: 420px;
+  width: 600px;
   padding: 22px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
@@ -625,4 +625,100 @@ select:focus {
 .day-cell.today .lunar-num {
   color: #2563eb; /* Ngày hôm nay thì đổi sang màu xanh */
   font-weight: 600;
+}
+
+/* Thanh tiến độ công việc */
+.day-progress-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 0 2px;
+}
+
+.battery-bar {
+  position: relative;
+  flex: 1;
+  height: 26px;
+  background-color: #f1f5f9;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.battery-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #40e6b4, #06bd80);
+  transition: width 0.35s ease;
+  border-radius: 4px 0 0 4px;
+}
+
+.battery-percent {
+  position: relative;
+  z-index: 2;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+
+.progress-count {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #475569;
+  min-width: 38px;
+  text-align: right;
+}
+
+/* Tăng kích cỡ chữ trong modal */
+
+.day-details-card #day-details-title {
+  font-size: 1.25rem;
+}
+
+.day-details-card #day-details-subtitle {
+  font-size: 0.92rem;
+}
+
+/* 2. Thẻ công việc trong pop-up thoáng hơn */
+.day-details-task-list .task-item {
+  padding: 8px 12px;
+  gap: 6px;
+  border-radius: 8px;
+}
+
+/* 3. Tăng kích cỡ chữ tiêu đề công việc */
+.day-details-task-list .task-title {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* 4. Tăng kích cỡ giờ và nhãn Tag */
+.day-details-task-list .task-time {
+  font-size: 0.8rem;
+}
+
+.day-details-task-list .task-tag {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+}
+
+/* 5. Phóng to ô checkbox */
+.day-details-task-list .task-body input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+}
+
+/* 6. Phóng to nút xóa trong pop-up */
+.day-details-task-list .task-del-btn {
+  font-size: 0.85rem;
+  padding: 2px 4px;
 }
