@@ -28,6 +28,29 @@
             </div>
             <div class="project-item"><span class="icon">🚀</span> Launch</div>
           </div>
+
+          <div class="section-label">TAGS FILTER</div>
+          <div class="tag-filter-list" id="tag-filter-list">
+            <button class="tag-filter-btn active" data-tag="ALL">Tất cả</button>
+            <button class="tag-filter-btn tag-Daily" data-tag="Daily">
+              Daily
+            </button>
+            <button class="tag-filter-btn tag-Study" data-tag="Study">
+              Study
+            </button>
+            <button class="tag-filter-btn tag-Work" data-tag="Work">
+              Work
+            </button>
+            <button class="tag-filter-btn tag-Project" data-tag="Project">
+              Project
+            </button>
+            <button class="tag-filter-btn tag-Personal" data-tag="Personal">
+              Personal
+            </button>
+            <button class="tag-filter-btn tag-Other" data-tag="Other">
+              Other
+            </button>
+          </div>
         </div>
 
         <div class="sidebar-bottom">
@@ -52,6 +75,11 @@
           </div>
 
           <div class="topbar-actions">
+            <!-- Search việc -->
+            <div class="search-box">
+              <input type="text" id="search-input" placeholder="Tìm việc..." />
+            </div>
+
             <div class="view-controls">
               <button id="today-btn" class="btn-secondary">Hôm nay</button>
               <button class="btn-online-active">Tháng ▾</button>
@@ -59,7 +87,6 @@
             <button id="quick-add-btn" class="btn-primary">
               + Add Event/Task
             </button>
-            <button class="icon-btn circle">🔍</button>
             <button class="icon-btn circle">🔔</button>
             <div class="avatar small">A</div>
           </div>

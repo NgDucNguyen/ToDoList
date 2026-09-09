@@ -74,6 +74,10 @@ const taskDatePicker = document.getElementById("task-date-picker");
 const taskTimeInput = document.getElementById("task-time-input");
 const taskTagInput = document.getElementById("task-tag-input");
 
+let currentTagFilter = "ALL";
+let searchQuery = "";
+const searchInput = document.getElementById("search-input");
+const tagFilterButtons = document.querySelectorAll(".tag-filter-btn");
 // DOM Pop-up xem chi tiết ngày
 const dayDetailsModal = document.getElementById("day-details-modal");
 const dayDetailsTitle = document.getElementById("day-details-title");
@@ -105,6 +109,17 @@ function sortTaskByTime(taskList) {
     if (!a.time && b.time) return 1;
     return 0;
   });
+}
+
+// Hàm chuẩn hóa tiếng Việt (bỏ dấu, chuyển chữ thường)
+function removeVietnameseTones(str) {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
 }
 //Dựng bảng lịch
 
@@ -160,6 +175,17 @@ function renderCalendar() {
   }
 }
 
+//Hàm lọc task theo tag và từ khóa
+function getFilteredTasks(taskList) {
+  return taskList.filter((task) => {
+    const matchTag =
+      currentTagFilter === "ALL" || task.tag === currentTagFilter;
+    const matchQuery =
+      !searchQuery ||
+      task.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchTag && matchQuery;
+  });
+}
 function createDayCell(dateObj, isOtherMonth, isToday = false) {
   const dateStr = formatDateString(dateObj);
   const cell = document.createElement("div");
@@ -190,7 +216,8 @@ function createDayCell(dateObj, isOtherMonth, isToday = false) {
   const taskList = document.createElement("div");
   taskList.className = "task-list";
 
-  const rawDayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const dayTasksBeforeFilter = tasks.filter((t) => t.task_date === dateStr);
+  const rawDayTasks = getFilteredTasks(dayTasksBeforeFilter);
   const dayTasks = sortTaskByTime(rawDayTasks);
 
   // Chỉ hiện tối đa 2 việc đầu tiên trên ô để không sinh thanh cuộn
@@ -287,7 +314,8 @@ function openDayDetailsModal(dateStr) {
 
 // Ham cap nhật thanh pin
 function updateDayProgress(dateStr) {
-  const dayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const dayTasksBeforeFilter = tasks.filter((t) => t.task_date === dateStr);
+  const dayTasks = getFilteredTasks(dayTasksBeforeFilter); // [SỬA TẠI ĐÂY]
   const total = dayTasks.length;
   const completed = dayTasks.filter((t) => t.is_completed).length;
 
@@ -310,7 +338,8 @@ function renderDayDetailsList(dateStr) {
   updateDayProgress(dateStr);
 
   dayDetailsTaskList.innerHTML = "";
-  const rawDayTasks = tasks.filter((t) => t.task_date === dateStr);
+  const dayTasksBeforeFilter = tasks.filter((t) => t.task_date === dateStr);
+  const rawDayTasks = getFilteredTasks(dayTasksBeforeFilter);
   const dayTasks = sortTaskByTime(rawDayTasks);
 
   if (dayTasks.length === 0) {
@@ -587,3 +616,26 @@ todayBtn.addEventListener("click", () => {
 });
 
 renderCalendar();
+
+//  Lắng nghe sự kiện Search & Filter Tag
+if (searchInput) {
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim();
+    renderCalendar();
+    if (!dayDetailsModal.classList.contains("hidden")) {
+      renderDayDetailsList(currentSelectedDate);
+    }
+  });
+}
+
+tagFilterButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    tagFilterButtons.forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentTagFilter = btn.getAttribute("data-tag");
+    renderCalendar();
+    if (!dayDetailsModal.classList.contains("hidden")) {
+      renderDayDetailsList(currentSelectedDate);
+    }
+  });
+});

@@ -722,3 +722,72 @@ select:focus {
   font-size: 0.85rem;
   padding: 2px 4px;
 }
+
+/* Ô search */
+/* ==========================================================================
+   BỘ LỌC TAG VÀ THANH TÌM KIẾM (FILTER & SEARCH)
+   ========================================================================== */
+
+/* Ô tìm kiếm trên topbar */
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box .search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-box input {
+  padding: 6px 12px 6px 30px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  outline: none;
+  background-color: var(--bg-white);
+  width: 160px;
+  transition: all 0.2s ease;
+}
+
+.search-box input:focus {
+  border-color: #2563eb;
+  width: 210px;
+}
+
+/* Danh sách nút chọn lọc Tag ở sidebar */
+.tag-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.tag-filter-btn {
+  border: 1px solid transparent;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #f1f5f9;
+  color: #64748b;
+  transition: all 0.15s ease;
+}
+
+.tag-filter-btn:hover {
+  opacity: 0.85;
+}
+
+.tag-filter-btn.active {
+  box-shadow: 0 0 0 2px #0f172a;
+}
+
+.tag-filter-btn[data-tag="ALL"].active {
+  background: #0f172a;
+  color: #ffffff;
+}
