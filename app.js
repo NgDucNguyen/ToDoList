@@ -178,11 +178,21 @@ function renderCalendar() {
 //Hàm lọc task theo tag và từ khóa
 function getFilteredTasks(taskList) {
   return taskList.filter((task) => {
+    // Khớp Tag
     const matchTag =
       currentTagFilter === "ALL" || task.tag === currentTagFilter;
-    const matchQuery =
-      !searchQuery ||
-      task.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Khớp từ khóa -> Tahcs từ
+    if (!searchQuery) return matchTag;
+    git;
+    const normalizedTitle = removeVietnameseTones(task.title);
+    // Tách chuỗi tìm kiếm thành từng từ
+    const searchWords = removeVietnameseTones(searchQuery)
+      .split(/\s+/)
+      .filter(Boolean);
+    const matchQuery = searchWords.every((word) =>
+      normalizedTitle.includes(word),
+    );
     return matchTag && matchQuery;
   });
 }
