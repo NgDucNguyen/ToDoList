@@ -21,13 +21,17 @@
             </a>
           </nav>
 
-          <div class="section-label">PROJECTS</div>
-          <div class="project-list">
-            <div class="project-item">
-              <span class="icon">📁</span> UX Revamp
-            </div>
-            <div class="project-item"><span class="icon">🚀</span> Launch</div>
+          <div class="projects-section-header">
+            <div class="section-label">PROJECTS</div>
+            <button
+              id="add-project-btn"
+              class="icon-add-proj"
+              title="Thêm dự án"
+            >
+              +
+            </button>
           </div>
+          <div class="project-list" id="project-list"></div>
 
           <div class="section-label">TAGS FILTER</div>
           <div class="tag-filter-list" id="tag-filter-list">
@@ -65,50 +69,101 @@
       </aside>
 
       <main class="main-content">
-        <header class="topbar">
-          <div class="date-controls">
-            <h2 id="current-month-year">Tháng --, ----</h2>
-            <div class="nav-btn-group">
-              <button id="prev-month-btn" class="btn-nav">&lt;</button>
-              <button id="next-month-btn" class="btn-nav">&gt;</button>
-            </div>
-          </div>
-
-          <div class="topbar-actions">
-            <!-- Search việc -->
-            <div class="search-box">
-              <input type="text" id="search-input" placeholder="Tìm việc..." />
+        <div id="calendar-view">
+          <header class="topbar">
+            <div class="date-controls">
+              <h2 id="current-month-year">Tháng --, ----</h2>
+              <div class="nav-btn-group">
+                <button id="prev-month-btn" class="btn-nav">&lt;</button>
+                <button id="next-month-btn" class="btn-nav">&gt;</button>
+              </div>
             </div>
 
-            <div class="view-controls">
-              <button id="today-btn" class="btn-secondary">Hôm nay</button>
-              <button class="btn-online-active">Tháng ▾</button>
-            </div>
-            <button id="quick-add-btn" class="btn-primary">
-              + Add Event/Task
-            </button>
-            <button class="icon-btn circle">🔔</button>
-            <div class="avatar small">A</div>
-          </div>
-        </header>
+            <div class="topbar-actions">
+              <!-- Search việc -->
+              <div class="search-box">
+                <input
+                  type="text"
+                  id="search-input"
+                  placeholder="Tìm việc..."
+                />
+              </div>
 
-        <!-- Tiêu đề thứ trong tuần -->
-        <div class="calendar-card">
-          <div class="weekdays-bar">
-            <div>Thứ 2</div>
-            <div>Thứ 3</div>
-            <div>Thứ 4</div>
-            <div>Thứ 5</div>
-            <div>Thứ 6</div>
-            <div>Thứ 7</div>
-            <div>Chủ nhật</div>
+              <div class="view-controls">
+                <button id="today-btn" class="btn-secondary">Hôm nay</button>
+                <button class="btn-online-active">Tháng ▾</button>
+              </div>
+              <button id="quick-add-btn" class="btn-primary">
+                + Add Event/Task
+              </button>
+              <button class="icon-btn circle">🔔</button>
+              <div class="avatar small">A</div>
+            </div>
+          </header>
+
+          <!-- Tiêu đề thứ trong tuần -->
+          <div class="calendar-card">
+            <div class="weekdays-bar">
+              <div>Thứ 2</div>
+              <div>Thứ 3</div>
+              <div>Thứ 4</div>
+              <div>Thứ 5</div>
+              <div>Thứ 6</div>
+              <div>Thứ 7</div>
+              <div>Chủ nhật</div>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
           </div>
-          <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+
+        <!-- Khối 3 cột cho project(ẩn) -->
+        <div id="kanban-view" class="hidden">
+          <header class="project-header">
+            <h1 id="kanban-project-title">Tên dự án</h1>
+          </header>
+
+          <div class="kanban-grid-layout">
+            <!-- Cột 1 -->
+            <div class="kanban-col">
+              <div class="col-head">
+                <span class="badge badge-todo">Việc cần làm</span>
+                <span class="badge-count">10</span>
+              </div>
+              <div class="col-body">
+                <div class="sample-card">Cập nhật công việc</div>
+                <div class="sample-card">Cập nhật công việc</div>
+              </div>
+            </div>
+
+            <!-- CỘt 2 -->
+            <div class="kanban-col">
+              <div class="col-head">
+                <span class="badge badge-doing">Đang thực hiện</span>
+                <span class="badge-count">5</span>
+              </div>
+              <div class="col-body">
+                <div class="sample-card">Cập nhật công việc</div>
+                <div class="sample-card">Cập nhật công việc</div>
+              </div>
+            </div>
+
+            <!-- Cột 3 -->
+            <div class="kanban-col">
+              <div class="col-head">
+                <span class="badge badge-done">Hoàn thành</span>
+                <span class="badge-count">10</span>
+              </div>
+              <div class="col-body">
+                <div class="sample-card">Cập nhật công việc</div>
+                <div class="sample-card">Cập nhật công việc</div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
 
-    <!-- POP-UP XEM TẤT CẢ CÔNG VIỆC TRONG NGÀY -->
+    <!-- Pop-up xem việc trong ngày -->
     <div id="day-details-modal" class="modal-backdrop hidden">
       <div class="modal-card day-details-card">
         <div class="modal-header">

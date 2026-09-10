@@ -649,3 +649,80 @@ tagFilterButtons.forEach((btn) => {
     }
   });
 });
+
+//Chuyển đổi giữa lịch và project
+const calendarView = document.getElementById("calendar-view");
+const kanbanView = document.getElementById("kanban-view");
+const kanbanProjectTitle = document.getElementById("kanban-project-title");
+const projectListEl = document.getElementById("project-list");
+const addProjectBtn = document.getElementById("add-project-btn");
+const calendarNavLink = document.querySelector(
+  ".nav-manu .nav-link:first-child",
+);
+
+let myProjects = JSON.parse(localStorage.getItem("planner_projects")) || [
+  { id: "proj_1", name: "UX Revamp" },
+  { id: "proj_2", name: "Launch" },
+];
+
+// Hàm chuyển sang view Lịch
+function showCalendarView() {
+  calendarView.classList.remove("hidden");
+  kanbanView.classList.add("hidden");
+  calendarNavLink.classList.add("active");
+  document
+    .querySelectorAll(".project-item")
+    .forEach((el) => el.classList.remove("active"));
+}
+
+// Hàm chuyển sang view 3 cột của Project
+function showKanbanView(proj) {
+  calendarView.classList.add("hidden");
+  kanbanView.classList.remove("hidden");
+  calendarNavLink.classList.remove("active");
+  kanbanProjectTitle.textContent = proj.name;
+}
+
+// Bấm nút Calendar
+if (calendarNavLink) {
+  calendarNavLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    showCalendarView();
+  });
+}
+
+// Vẽ danh sách dự án
+function renderProjectsList() {
+  if (!projectListEl) return;
+  projectListEl.innerHTML = "";
+  myProjects.forEach((proj) => {
+    const item = document.createElement("div");
+    item.className = "project-item";
+    item.innerHTML = `<span class="icon">📁</span> <span>${proj.name}</span>`;
+    item.addEventListener("click", () => {
+      document
+        .querySelectorAll(".project-item")
+        .forEach((el) => el.classList.remove("active"));
+      item.classList.add("active");
+      showKanbanView(proj);
+    });
+    projectListEl.appendChild(item);
+  });
+}
+
+// Bấm nút + tạo dự án mới
+if (addProjectBtn) {
+  addProjectBtn.addEventListener("click", () => {
+    const name = prompt("Nhập tên dự án mới:");
+    if (name && name.trim()) {
+      const newProj = { id: "proj_" + Date.now(), name: name.trim() };
+      myProjects.push(newProj);
+      localStorage.setItem("planner_projects", JSON.stringify(myProjects));
+      renderProjectsList();
+      showKanbanView(newProj);
+    }
+  });
+}
+
+// Khởi chạy hiển thị dự án
+renderProjectsList();

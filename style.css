@@ -791,3 +791,141 @@ select:focus {
   background: #0f172a;
   color: #ffffff;
 }
+
+/* 3 cột */
+/* Ẩn hiện các màn hình */
+.hidden {
+  display: none !important;
+}
+
+#calendar-view,
+#kanban-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+/* Tiêu đề dự án */
+.project-header {
+  margin-bottom: 24px;
+}
+.project-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.projects-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 10px;
+  margin: 24px 0 6px 0;
+}
+
+.projects-section-header .section-label {
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 1px;
+}
+
+.icon-add-proj {
+  background: transparent;
+  border: none;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.icon-add-proj:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Bo góc 3 khung viền */
+.kanban-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.kanban-col {
+  background: #fbfbfa;
+  border: 1px solid #e9e9e7;
+  border-radius: 15px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.col-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+/* Bo góc các nhãn tag */
+.badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+.badge-todo {
+  background: #fbebf9;
+  color: #9d174d;
+}
+.badge-doing {
+  background: #fef3c7;
+  color: #b45309;
+}
+.badge-done {
+  background: #eefbf3;
+  color: #166534;
+}
+
+.badge-count {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+/* Bo góc thẻ */
+.col-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sample-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1f2937;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sample-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
