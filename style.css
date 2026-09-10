@@ -929,3 +929,114 @@ select:focus {
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
   transform: translateY(-1px);
 }
+
+/* Hiệu ứng ... */
+.project-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.proj-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proj-more-btn {
+  opacity: 0; /* Mặc định ẩn */
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+}
+
+/* Di chuột vào Project thì hiện nút ... */
+.project-item:hover .proj-more-btn {
+  opacity: 1;
+}
+
+.proj-more-btn:hover {
+  background: #e2e8f0;
+  color: var(--text-primary);
+}
+
+/* Menu pop-up xác nhận xóa nhỏ gọn */
+.proj-action-menu {
+  position: absolute;
+  right: 6px;
+  top: 32px;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.proj-action-menu button {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.proj-action-menu button:hover {
+  background: #fee2e2;
+}
+
+/* Thêm dấu X sau mỗi công việc */
+.sample-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-del-btn {
+  opacity: 0; /* Mặc định ẩn */
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+/* Di chuột vào thẻ việc thì hiện nút ✕ */
+.sample-card:hover .card-del-btn {
+  opacity: 1;
+}
+
+.card-del-btn:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}

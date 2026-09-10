@@ -650,7 +650,7 @@ tagFilterButtons.forEach((btn) => {
   });
 });
 
-//Chuyển đổi giữa lịch và project
+//============== QUẢN lý dự án ==================
 const calendarView = document.getElementById("calendar-view");
 const kanbanView = document.getElementById("kanban-view");
 const kanbanProjectTitle = document.getElementById("kanban-project-title");
@@ -660,16 +660,24 @@ const calendarNavLink = document.querySelector(
   ".nav-manu .nav-link:first-child",
 );
 
-let myProjects = JSON.parse(localStorage.getItem("planner_projects")) || [
+// Dữ liệu mẫu
+const defaultProjects = [
   { id: "proj_1", name: "UX Revamp" },
   { id: "proj_2", name: "Launch" },
+  { id: "proj_3", name: "CV" },
 ];
+
+let myProjects = JSON.parse(localStorage.getItem("planner_projects"));
+if (!myProjects || !Array.isArray(myProjects) || myProjects.length === 0) {
+  myProjects = defaultProjects;
+  localStorage.setItem("planner_projects", JSON.stringify(myProjects));
+}
 
 // Hàm chuyển sang view Lịch
 function showCalendarView() {
-  calendarView.classList.remove("hidden");
-  kanbanView.classList.add("hidden");
-  calendarNavLink.classList.add("active");
+  if (calendarView) calendarView.classList.remove("hidden");
+  if (kanbanView) kanbanView.classList.add("hidden");
+  if (calendarNavLink) calendarNavLink.classList.add("active");
   document
     .querySelectorAll(".project-item")
     .forEach((el) => el.classList.remove("active"));
@@ -677,13 +685,13 @@ function showCalendarView() {
 
 // Hàm chuyển sang view 3 cột của Project
 function showKanbanView(proj) {
-  calendarView.classList.add("hidden");
-  kanbanView.classList.remove("hidden");
-  calendarNavLink.classList.remove("active");
-  kanbanProjectTitle.textContent = proj.name;
+  if (calendarView) calendarView.classList.add("hidden");
+  if (kanbanView) kanbanView.classList.remove("hidden");
+  if (calendarNavLink) calendarNavLink.classList.remove("active");
+  if (kanbanProjectTitle) kanbanProjectTitle.textContent = proj.name;
 }
 
-// Bấm nút Calendar
+// Bấm nút Calendar trên menu sidebar
 if (calendarNavLink) {
   calendarNavLink.addEventListener("click", (e) => {
     e.preventDefault();
@@ -691,14 +699,23 @@ if (calendarNavLink) {
   });
 }
 
-// Vẽ danh sách dự án
+// Render danh sách dự án ra sidebar
 function renderProjectsList() {
   if (!projectListEl) return;
   projectListEl.innerHTML = "";
+
   myProjects.forEach((proj) => {
     const item = document.createElement("div");
     item.className = "project-item";
-    item.innerHTML = `<span class="icon">📁</span> <span>${proj.name}</span>`;
+    item.innerHTML = `
+      <div class="proj-left">
+        <span class="icon">📁</span>
+        <span>${proj.name}</span>
+      </div>
+      <button class="proj-more-btn" title="Tùy chọn">•••</button>
+    `;
+
+    // Click vào project để mở bảng 3 cột
     item.addEventListener("click", () => {
       document
         .querySelectorAll(".project-item")
@@ -706,6 +723,27 @@ function renderProjectsList() {
       item.classList.add("active");
       showKanbanView(proj);
     });
+
+    // Bấm nút ... chỉ bật menu hiển thị Xóa
+    const moreBtn = item.querySelector(".proj-more-btn");
+    moreBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // Ngăn mở project
+
+      // Đóng các menu khác đang mở
+      document.querySelectorAll(".proj-action-menu").forEach((m) => m.remove());
+
+      const menu = document.createElement("div");
+      menu.className = "proj-action-menu";
+      menu.innerHTML = `<button type="button">🗑 Xóa dự án</button>`;
+
+      menu.querySelector("button").addEventListener("click", (evt) => {
+        evt.stopPropagation();
+        menu.remove(); // Chỉ đóng pop-up lại
+      });
+
+      item.appendChild(menu);
+    });
+
     projectListEl.appendChild(item);
   });
 }
@@ -724,5 +762,17 @@ if (addProjectBtn) {
   });
 }
 
-// Khởi chạy hiển thị dự án
+// Bấm chuột ra ngoài khoảng trống thì đóng menu ...
+document.addEventListener("click", () => {
+  document.querySelectorAll(".proj-action-menu").forEach((m) => m.remove());
+});
+
+// Chặn các nút ✕ trên thẻ việc trong cột Kanban
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.classList.contains("card-del-btn")) {
+    e.stopPropagation();
+  }
+});
+
+// render project
 renderProjectsList();
