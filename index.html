@@ -124,57 +124,43 @@
 
           <div class="kanban-grid-layout">
             <!-- Cột 1 -->
-            <div class="kanban-col">
+            <div class="kanban-col" data-status="todo">
               <div class="col-head">
-                <span class="badge badge-todo">Việc cần làm</span>
-                <span class="badge-count">10</span>
-              </div>
-              <div class="col-body">
-                <div class="sample-card">
-                  <span>Cập nhật công việc</span>
-                  <button class="card-del-btn" title="Xóa việc">✕</button>
+                <div class="col-head-left">
+                  <span class="badge badge-todo">Việc cần làm</span>
+                  <span class="badge-count" id="count-todo">0</span>
                 </div>
-                <div class="sample-card">
-                  <span>Cập nhật công việc</span>
-                  <button class="card-del-btn" title="Xóa việc">✕</button>
-                </div>
+                <button
+                  id="add-kanban-task-btn"
+                  class="icon-add-card"
+                  title="Thêm việc"
+                >
+                  +
+                </button>
               </div>
+              <div class="col-body" id="cards-todo"></div>
             </div>
 
             <!-- CỘt 2 -->
-            <div class="kanban-col">
+            <div class="kanban-col" data-status="doing">
               <div class="col-head">
-                <span class="badge badge-doing">Đang thực hiện</span>
-                <span class="badge-count">5</span>
-              </div>
-              <div class="col-body">
-                <div class="sample-card">
-                  <span>Cập nhật công việc</span>
-                  <button class="card-del-btn" title="Xóa việc">✕</button>
-                </div>
-                <div class="sample-card">
-                  <span>Cập nhật công việc</span>
-                  <button class="card-del-btn" title="Xóa việc">✕</button>
+                <div class="col-head-left">
+                  <span class="badge badge-doing">Đang thực hiện</span>
+                  <span class="badge-count" id="count-doing">0</span>
                 </div>
               </div>
+              <div class="col-body"></div>
             </div>
 
             <!-- Cột 3 -->
-            <div class="kanban-col">
+            <div class="kanban-col" data-status="done">
               <div class="col-head">
-                <span class="badge badge-done">Hoàn thành</span>
-                <span class="badge-count">10</span>
-              </div>
-              <div class="col-body">
-                <div class="sample-card">
-                  <span>Cập nhật công việc</span>
-                  <button class="card-del-btn" title="Xóa việc">✕</button>
-                </div>
-                <div class="sample-card">
-                  <span>Cập nhật công việc</span>
-                  <button class="card-del-btn" title="Xóa việc">✕</button>
+                <div class="col-head-left">
+                  <span class="badge badge-done">Hoàn thành</span>
+                  <span class="badge-count" id="count-done">0</span>
                 </div>
               </div>
+              <div class="col-body"></div>
             </div>
           </div>
         </div>

@@ -650,17 +650,18 @@ tagFilterButtons.forEach((btn) => {
   });
 });
 
-//============== QUẢN lý dự án ==================
+//============== QUẢN LÝ DỰ ÁN & KANBAN ==================
 const calendarView = document.getElementById("calendar-view");
 const kanbanView = document.getElementById("kanban-view");
 const kanbanProjectTitle = document.getElementById("kanban-project-title");
 const projectListEl = document.getElementById("project-list");
 const addProjectBtn = document.getElementById("add-project-btn");
+const addKanbanTaskBtn = document.getElementById("add-kanban-task-btn");
 const calendarNavLink = document.querySelector(
   ".nav-manu .nav-link:first-child",
 );
 
-// Dữ liệu mẫu
+// Dữ liệu Projects
 const defaultProjects = [
   { id: "proj_1", name: "UX Revamp" },
   { id: "proj_2", name: "Launch" },
@@ -673,7 +674,17 @@ if (!myProjects || !Array.isArray(myProjects) || myProjects.length === 0) {
   localStorage.setItem("planner_projects", JSON.stringify(myProjects));
 }
 
-// Hàm chuyển sang view Lịch
+// Dữ liệu thẻ việc của các cột
+let kanbanTasks =
+  JSON.parse(localStorage.getItem("planner_kanban_tasks")) || [];
+
+function saveKanbanTasks() {
+  localStorage.setItem("planner_kanban_tasks", JSON.stringify(kanbanTasks));
+}
+
+let currentActiveProjectId = null;
+
+// Chuyển sang xem Lịch
 function showCalendarView() {
   if (calendarView) calendarView.classList.remove("hidden");
   if (kanbanView) kanbanView.classList.add("hidden");
@@ -681,17 +692,19 @@ function showCalendarView() {
   document
     .querySelectorAll(".project-item")
     .forEach((el) => el.classList.remove("active"));
+  currentActiveProjectId = null;
 }
 
-// Hàm chuyển sang view 3 cột của Project
+// Chuyển sang xem Kanban của Project
 function showKanbanView(proj) {
+  currentActiveProjectId = proj.id;
   if (calendarView) calendarView.classList.add("hidden");
   if (kanbanView) kanbanView.classList.remove("hidden");
   if (calendarNavLink) calendarNavLink.classList.remove("active");
   if (kanbanProjectTitle) kanbanProjectTitle.textContent = proj.name;
+  renderKanbanBoard();
 }
 
-// Bấm nút Calendar trên menu sidebar
 if (calendarNavLink) {
   calendarNavLink.addEventListener("click", (e) => {
     e.preventDefault();
@@ -699,7 +712,7 @@ if (calendarNavLink) {
   });
 }
 
-// Render danh sách dự án ra sidebar
+// Render danh sách dự án ra sidebar với tính năng sửa tên trực tiếp
 function renderProjectsList() {
   if (!projectListEl) return;
   projectListEl.innerHTML = "";
@@ -707,16 +720,66 @@ function renderProjectsList() {
   myProjects.forEach((proj) => {
     const item = document.createElement("div");
     item.className = "project-item";
+    if (proj.id === currentActiveProjectId) item.classList.add("active");
+
     item.innerHTML = `
       <div class="proj-left">
         <span class="icon">📁</span>
-        <span>${proj.name}</span>
+        <span class="proj-name-text">${proj.name}</span>
       </div>
       <button class="proj-more-btn" title="Tùy chọn">•••</button>
     `;
 
-    // Click vào project để mở bảng 3 cột
-    item.addEventListener("click", () => {
+    const projNameSpan = item.querySelector(".proj-name-text");
+    const moreBtn = item.querySelector(".proj-more-btn");
+
+    // Hàm kích hoạt sửa tên dự án trực tiếp
+    const startRenameProject = () => {
+      // Đóng tất cả menu ... đang mở
+      document.querySelectorAll(".proj-action-menu").forEach((m) => m.remove());
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "proj-inline-input";
+      input.value = proj.name;
+
+      projNameSpan.replaceWith(input);
+      input.focus();
+      input.select(); // Tự động bôi đen toàn bộ tên dự án
+
+      let isSaved = false;
+      const saveProjectName = () => {
+        if (isSaved) return;
+        isSaved = true;
+        const newName = input.value.trim();
+        if (newName && newName !== proj.name) {
+          proj.name = newName;
+          localStorage.setItem("planner_projects", JSON.stringify(myProjects));
+
+          // Nếu đang mở đúng dự án này thì cập nhật luôn tiêu đề Kanban
+          if (currentActiveProjectId === proj.id && kanbanProjectTitle) {
+            kanbanProjectTitle.textContent = proj.name;
+          }
+        }
+        renderProjectsList();
+      };
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          input.blur();
+        } else if (e.key === "Escape") {
+          isSaved = true;
+          renderProjectsList();
+        }
+      });
+
+      input.addEventListener("blur", saveProjectName);
+    };
+
+    // Click vào item để mở Kanban
+    item.addEventListener("click", (e) => {
+      if (e.target.classList.contains("proj-inline-input")) return;
       document
         .querySelectorAll(".project-item")
         .forEach((el) => el.classList.remove("active"));
@@ -724,22 +787,51 @@ function renderProjectsList() {
       showKanbanView(proj);
     });
 
-    // Bấm nút ... chỉ bật menu hiển thị Xóa
-    const moreBtn = item.querySelector(".proj-more-btn");
-    moreBtn.addEventListener("click", (e) => {
-      e.stopPropagation(); // Ngăn mở project
+    // Double click vào tên dự án để sửa nhanh
+    projNameSpan.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      startRenameProject();
+    });
 
-      // Đóng các menu khác đang mở
+    // Bấm nút ... để mở menu
+    moreBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
       document.querySelectorAll(".proj-action-menu").forEach((m) => m.remove());
 
       const menu = document.createElement("div");
       menu.className = "proj-action-menu";
-      menu.innerHTML = `<button type="button">🗑 Xóa dự án</button>`;
+      menu.innerHTML = `
+        <button type="button" class="rename-proj-action">✏️ Đổi tên</button>
+        <button type="button" class="delete-proj-action">🗑 Xóa dự án</button>
+      `;
 
-      menu.querySelector("button").addEventListener("click", (evt) => {
-        evt.stopPropagation();
-        menu.remove(); // Chỉ đóng pop-up lại
-      });
+      // Chọn Đổi tên: kích hoạt inline edit
+      menu
+        .querySelector(".rename-proj-action")
+        .addEventListener("click", (evt) => {
+          evt.stopPropagation();
+          menu.remove();
+          startRenameProject();
+        });
+
+      // Chọn Xóa dự án
+      menu
+        .querySelector(".delete-proj-action")
+        .addEventListener("click", (evt) => {
+          evt.stopPropagation();
+          menu.remove();
+          myProjects = myProjects.filter((p) => p.id !== proj.id);
+          localStorage.setItem("planner_projects", JSON.stringify(myProjects));
+
+          // Xóa luôn các task thuộc dự án này
+          kanbanTasks = kanbanTasks.filter((t) => t.project_id !== proj.id);
+          saveKanbanTasks();
+
+          if (currentActiveProjectId === proj.id) {
+            showCalendarView();
+          }
+          renderProjectsList();
+        });
 
       item.appendChild(menu);
     });
@@ -748,7 +840,7 @@ function renderProjectsList() {
   });
 }
 
-// Bấm nút + tạo dự án mới
+// Nút + thêm dự án mới
 if (addProjectBtn) {
   addProjectBtn.addEventListener("click", () => {
     const name = prompt("Nhập tên dự án mới:");
@@ -762,17 +854,130 @@ if (addProjectBtn) {
   });
 }
 
-// Bấm chuột ra ngoài khoảng trống thì đóng menu ...
+// Render các thẻ việc vào cột
+function renderKanbanBoard() {
+  if (!currentActiveProjectId) return;
+
+  const statuses = ["todo", "doing", "done"];
+  statuses.forEach((st) => {
+    const container = document.getElementById(`cards-${st}`);
+    const countEl = document.getElementById(`count-${st}`);
+    if (!container) return;
+
+    const cards = kanbanTasks.filter(
+      (t) => t.project_id === currentActiveProjectId && t.status === st,
+    );
+
+    if (countEl) countEl.textContent = cards.length;
+    container.innerHTML = "";
+
+    cards.forEach((task) => {
+      const card = document.createElement("div");
+      card.className = "sample-card";
+      card.innerHTML = `
+        <span class="card-title">${task.title}</span>
+        <div class="card-actions">
+          <button class="card-edit-btn" title="Đổi tên">✏️</button>
+          <button class="card-del-btn" title="Xóa việc">✕</button>
+        </div>
+      `;
+
+      const titleSpan = card.querySelector(".card-title");
+      const editBtn = card.querySelector(".card-edit-btn");
+      const delBtn = card.querySelector(".card-del-btn");
+      const actionsDiv = card.querySelector(".card-actions");
+
+      // Hàm kích hoạt sửa tên
+      const startEditing = () => {
+        // Tạo ô input thay thế vị trí span tên việc
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "card-inline-input";
+        input.value = task.title;
+
+        // Ẩn tạm nút sửa/xóa khi đang gõ
+        actionsDiv.style.display = "none";
+        titleSpan.replaceWith(input);
+
+        input.focus();
+        input.select(); // chọn tên hiện tại
+
+        let isSaved = false;
+        const saveEdit = () => {
+          if (isSaved) return;
+          isSaved = true;
+          const newTitle = input.value.trim();
+          if (newTitle && newTitle !== task.title) {
+            task.title = newTitle;
+            saveKanbanTasks();
+          }
+          renderKanbanBoard();
+        };
+
+        // Bấm Enter để lưu
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            input.blur();
+          } else if (e.key === "Escape") {
+            isSaved = true;
+            renderKanbanBoard();
+          }
+        });
+
+        // Bấm ra khoảng trống ngoài
+        input.addEventListener("blur", saveEdit);
+      };
+
+      // Bấm nút bút để kích hoạt sửa
+      editBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        startEditing();
+      });
+
+      // Bấm trực tiếp 2 lần vào tên để sửa nhanh
+      titleSpan.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        startEditing();
+      });
+
+      // Bấm nút ✕ để xóa vĩnh viễn việc
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        kanbanTasks = kanbanTasks.filter((t) => t.id !== task.id);
+        saveKanbanTasks();
+        renderKanbanBoard();
+      });
+
+      container.appendChild(card);
+    });
+  });
+}
+
+// Bắt sự kiện bấm nút + trên cột Việc cần làm
+if (addKanbanTaskBtn) {
+  addKanbanTaskBtn.addEventListener("click", () => {
+    if (!currentActiveProjectId) return;
+
+    const title = prompt("Nhập công việc cần làm:");
+    if (title && title.trim()) {
+      kanbanTasks.push({
+        id: "kb_" + Date.now(),
+        project_id: currentActiveProjectId,
+        title: title.trim(),
+        status: "todo",
+      });
+
+      saveKanbanTasks();
+      renderKanbanBoard();
+    }
+  });
+}
+
+// Đóng menu ... khi click ra ngoài
 document.addEventListener("click", () => {
   document.querySelectorAll(".proj-action-menu").forEach((m) => m.remove());
 });
 
-// Chặn các nút ✕ trên thẻ việc trong cột Kanban
-document.addEventListener("click", (e) => {
-  if (e.target && e.target.classList.contains("card-del-btn")) {
-    e.stopPropagation();
-  }
-});
-
-// render project
+// Chạy khởi tạo danh sách dự án
 renderProjectsList();
