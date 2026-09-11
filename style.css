@@ -1290,3 +1290,31 @@ select:focus {
 .sample-card.dragging {
   opacity: 0.4;
 }
+
+/* Khối chứa checkbox và tên task bên trái */
+.card-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Checkbox của từng việc */
+.card-checkbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #2563eb;
+  flex-shrink: 0;
+}
+
+/* Thẻ khi ở cột Hoàn thành */
+.sample-card.completed {
+  opacity: 0.65;
+}
+
+.sample-card.completed .card-title {
+  text-decoration: line-through;
+  color: #64748b;
+}

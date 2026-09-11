@@ -855,6 +855,7 @@ if (addProjectBtn) {
 }
 
 // Render các thẻ việc vào cột
+
 function renderKanbanBoard() {
   if (!currentActiveProjectId) return;
 
@@ -873,34 +874,61 @@ function renderKanbanBoard() {
 
     cards.forEach((task) => {
       const card = document.createElement("div");
-      card.className = "sample-card";
+      const isDone = task.status === "done";
+      card.className = `sample-card ${isDone ? "completed" : ""}`;
+
       card.innerHTML = `
-        <span class="card-title">${task.title}</span>
+        <div class="card-left">
+          <input 
+            type="checkbox" 
+            class="card-checkbox" 
+            ${isDone ? "checked" : ""} 
+            title="${st === "todo" ? "Chuyển sang Đang thực hiện" : st === "doing" ? "Chuyển sang Hoàn thành" : "Chuyển về Đang thực hiện"}"
+          />
+          <span class="card-title">${task.title}</span>
+        </div>
         <div class="card-actions">
           <button class="card-edit-btn" title="Đổi tên">✏️</button>
           <button class="card-del-btn" title="Xóa việc">✕</button>
         </div>
       `;
 
+      const checkbox = card.querySelector(".card-checkbox");
       const titleSpan = card.querySelector(".card-title");
       const editBtn = card.querySelector(".card-edit-btn");
       const delBtn = card.querySelector(".card-del-btn");
       const actionsDiv = card.querySelector(".card-actions");
 
-      // Hàm kích hoạt sửa tên
+      // Bắt sự kiện tích checkbox
+      checkbox.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+
+      checkbox.addEventListener("change", (e) => {
+        if (task.status === "todo") {
+          task.status = "doing";
+        } else if (task.status === "doing") {
+          task.status = "done";
+        } else if (task.status === "done" && !e.target.checked) {
+          task.status = "doing";
+        }
+
+        saveKanbanTasks();
+        renderKanbanBoard();
+      });
+
+      // Hàm kích hoạt sửa tên trực tiếp
       const startEditing = () => {
-        // Tạo ô input thay thế vị trí span tên việc
         const input = document.createElement("input");
         input.type = "text";
         input.className = "card-inline-input";
         input.value = task.title;
 
-        // Ẩn tạm nút sửa/xóa khi đang gõ
         actionsDiv.style.display = "none";
         titleSpan.replaceWith(input);
 
         input.focus();
-        input.select(); // chọn tên hiện tại
+        input.select();
 
         let isSaved = false;
         const saveEdit = () => {
@@ -914,7 +942,6 @@ function renderKanbanBoard() {
           renderKanbanBoard();
         };
 
-        // Bấm Enter để lưu
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -925,23 +952,20 @@ function renderKanbanBoard() {
           }
         });
 
-        // Bấm ra khoảng trống ngoài
         input.addEventListener("blur", saveEdit);
       };
 
-      // Bấm nút bút để kích hoạt sửa
       editBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         startEditing();
       });
 
-      // Bấm trực tiếp 2 lần vào tên để sửa nhanh
       titleSpan.addEventListener("dblclick", (e) => {
         e.stopPropagation();
         startEditing();
       });
 
-      // Bấm nút ✕ để xóa vĩnh viễn việc
+      // Xóa việc
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         kanbanTasks = kanbanTasks.filter((t) => t.id !== task.id);
