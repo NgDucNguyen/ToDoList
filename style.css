@@ -1479,3 +1479,63 @@ select:focus {
 .myday-star-btn.active {
   color: #eab308;
 }
+
+/* Bọc khối nhập việc và thanh tùy chọn */
+.myday-add-wrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: #f8fafc;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+}
+
+.myday-add-wrapper:focus-within {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.myday-add-wrapper .myday-add-box {
+  border: none;
+  background: transparent;
+  padding: 10px 14px;
+}
+
+/* Thanh tùy chọn ngày & tag */
+.myday-options-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px 10px 14px;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.myday-opt-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+}
+
+.myday-opt-item .opt-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.myday-opt-item input[type="date"],
+.myday-opt-item select {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+  width: auto;
+}

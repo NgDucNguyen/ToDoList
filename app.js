@@ -886,11 +886,11 @@ if (addProjectBtn) {
       }
     };
 
-    // Nhấn Enter để lưu và mở project, nhấn Escape để hủy
+    // Nhấn Enter để lưu
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        input.blur(); // Gọi sự kiện blur bên dưới để lưu
+        input.blur(); //
       } else if (e.key === "Escape") {
         isHandled = true;
         tempItem.remove();
@@ -1112,6 +1112,16 @@ const mydayTaskList = document.getElementById("myday-task-list");
 const mydayDateLabel = document.getElementById("myday-date");
 const mydayQuickInput = document.getElementById("myday-quick-input");
 
+// DOM thanh tùy chọn ngày & tag
+const mydayOptionsBar = document.getElementById("myday-options-bar");
+const mydayDatePicker = document.getElementById("myday-date-picker");
+const mydayTagPicker = document.getElementById("myday-tag-picker");
+
+// Đặt giá trị mặc định cho ô chọn ngày là hôm nay
+if (mydayDatePicker) {
+  mydayDatePicker.value = formatDateString(new Date());
+}
+
 // Hiển thị ngày
 function updateMyDayDateHeader() {
   if (!mydayDateLabel) return;
@@ -1199,7 +1209,7 @@ function renderMyDayTasks() {
         />
         <div class="myday-content">
           <span class="myday-task-title">${task.title}</span>
-          <span class="myday-task-sub">📅 Hôm nay ${task.time ? `• ⏰ ${task.time}` : ""} ${task.tag ? `• 🏷️ ${task.tag}` : ""}</span>
+          <span class="myday-task-sub">📅 ${task.task_date === todayStr ? "Hôm nay" : task.task_date} ${task.time ? `• ⏰ ${task.time}` : ""} ${task.tag ? `• 🏷️ ${task.tag}` : ""}</span>
         </div>
       </div>
       <button class="myday-star-btn" title="Quan trọng">☆</button>
@@ -1226,29 +1236,49 @@ function renderMyDayTasks() {
   });
 }
 
-// Thêm tác vụ bằng phím Enter
+// Xử lý nhập liệu
 if (mydayQuickInput) {
+  mydayQuickInput.addEventListener("input", (e) => {
+    if (!mydayOptionsBar) return;
+    if (e.target.value.trim().length > 0) {
+      mydayOptionsBar.classList.remove("hidden");
+    } else {
+      mydayOptionsBar.classList.add("hidden");
+    }
+  });
+
   mydayQuickInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       const val = mydayQuickInput.value.trim();
       if (!val) return;
 
+      const chosenDate = mydayDatePicker
+        ? mydayDatePicker.value
+        : formatDateString(new Date());
+      const chosenTag = mydayTagPicker ? mydayTagPicker.value : "Daily";
+
       const newTask = {
         id: Date.now().toString(),
         title: val,
-        task_date: formatDateString(new Date()),
+        task_date: chosenDate || formatDateString(new Date()),
         time: "",
-        tag: "Daily",
+        tag: chosenTag,
         is_completed: false,
         created_at: new Date().toISOString(),
       };
 
-      tasks.unshift(newTask); // Đẩy việc mới lên đầu danh sách
+      tasks.unshift(newTask);
       saveTasks();
+
+      // Reset lại
       mydayQuickInput.value = "";
+      if (mydayDatePicker) mydayDatePicker.value = formatDateString(new Date());
+      if (mydayTagPicker) mydayTagPicker.value = "Daily";
+      if (mydayOptionsBar) mydayOptionsBar.classList.add("hidden");
+
       renderMyDayTasks();
-      renderCalendar(); // Đồng bộ sang lịch
+      renderCalendar();
     }
   });
 }

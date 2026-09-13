@@ -161,15 +161,43 @@
               </div>
             </header>
 
-            <!-- Ô thêm việc nhanh của ngày hôm nay -->
-            <div class="myday-add-box">
-              <span class="myday-add-icon">+</span>
-              <input
-                type="text"
-                id="myday-quick-input"
-                placeholder="Thêm tác vụ ..."
-                autocomplete="off"
-              />
+            <!-- Khối thêm việc nhanh với thanh tùy chọn động -->
+            <div class="myday-add-wrapper">
+              <div class="myday-add-box">
+                <span class="myday-add-icon">+</span>
+                <input
+                  type="text"
+                  id="myday-quick-input"
+                  placeholder="Thêm tác vụ..."
+                  autocomplete="off"
+                />
+              </div>
+
+              <!-- Thanh tùy chọn: Ẩn mặc định, gõ 1 ký tự sẽ hiện ra -->
+              <div id="myday-options-bar" class="myday-options-bar hidden">
+                <!-- Chọn ngày hạn -->
+                <div class="myday-opt-item">
+                  <span class="opt-icon">📅</span>
+                  <input
+                    type="date"
+                    id="myday-date-picker"
+                    title="Chọn ngày đến hạn"
+                  />
+                </div>
+
+                <!-- Chọn Tag -->
+                <div class="myday-opt-item">
+                  <span class="opt-icon">🏷️</span>
+                  <select id="myday-tag-picker" title="Chọn nhãn công việc">
+                    <option value="Daily">Daily</option>
+                    <option value="Study">Study</option>
+                    <option value="Work">Work</option>
+                    <option value="Project">Project</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
             <!-- Danh sách công việc hôm nay -->
