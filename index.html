@@ -16,7 +16,7 @@
             <a href="#" class="nav-link active">
               <span class="icon">📅</span> Calendar
             </a>
-            <a href="#" class="nav-link">
+            <a href="#" class="nav-link" id="todolist-nav-link">
               <span class="icon">☑️</span> To-Do-List
             </a>
           </nav>
@@ -56,16 +56,6 @@
             </button>
           </div>
         </div>
-
-        <div class="sidebar-bottom">
-          <div class="settinng-action">
-            <span class="icon">⚙️</span> Settings
-          </div>
-          <div class="user-infor">
-            <div class="avatar">N</div>
-            <span class="username">NgDucNguyen</span>
-          </div>
-        </div>
       </aside>
 
       <main class="main-content">
@@ -89,15 +79,9 @@
                 />
               </div>
 
-              <div class="view-controls">
-                <button id="today-btn" class="btn-secondary">Hôm nay</button>
-                <button class="btn-online-active">Tháng ▾</button>
-              </div>
               <button id="quick-add-btn" class="btn-primary">
                 + Add Event/Task
               </button>
-              <button class="icon-btn circle">🔔</button>
-              <div class="avatar small">A</div>
             </div>
           </header>
 
@@ -162,6 +146,34 @@
               </div>
               <div class="col-body" id="cards-done"></div>
             </div>
+          </div>
+        </div>
+
+        <!-- Khối công việc trong ngày -->
+        <div id="todolist-view" class="hidden">
+          <div class="myday-container">
+            <header class="myday-header">
+              <div>
+                <h1 class="myday-title">Ngày của Tôi</h1>
+                <p id="myday-date" class="myday-subtitle">
+                  Sunday, September 13
+                </p>
+              </div>
+            </header>
+
+            <!-- Ô thêm việc nhanh của ngày hôm nay -->
+            <div class="myday-add-box">
+              <span class="myday-add-icon">+</span>
+              <input
+                type="text"
+                id="myday-quick-input"
+                placeholder="Thêm tác vụ ..."
+                autocomplete="off"
+              />
+            </div>
+
+            <!-- Danh sách công việc hôm nay -->
+            <div id="myday-task-list" class="myday-task-list"></div>
           </div>
         </div>
       </main>

@@ -61,7 +61,6 @@ const monthYearLabel = document.getElementById("current-month-year");
 const calendarGrid = document.getElementById("calendar-grid");
 const prevMonthBtn = document.getElementById("prev-month-btn");
 const nextMonthBtn = document.getElementById("next-month-btn");
-const todayBtn = document.getElementById("today-btn");
 
 const quickAddBtn = document.getElementById("quick-add-btn");
 const taskModal = document.getElementById("task-modal");
@@ -620,11 +619,6 @@ nextMonthBtn.addEventListener("click", () => {
   renderCalendar();
 });
 
-todayBtn.addEventListener("click", () => {
-  viewDate = new Date();
-  renderCalendar();
-});
-
 renderCalendar();
 
 //  Lắng nghe sự kiện Search & Filter Tag
@@ -841,16 +835,70 @@ function renderProjectsList() {
 }
 
 // Nút + thêm dự án mới
+
 if (addProjectBtn) {
   addProjectBtn.addEventListener("click", () => {
-    const name = prompt("Nhập tên dự án mới:");
-    if (name && name.trim()) {
-      const newProj = { id: "proj_" + Date.now(), name: name.trim() };
-      myProjects.push(newProj);
-      localStorage.setItem("planner_projects", JSON.stringify(myProjects));
-      renderProjectsList();
-      showKanbanView(newProj);
+    // Nếu đang có một ô nhập dự án mới chưa lưu
+    const existingNewInput = document.getElementById(
+      "new-project-inline-input",
+    );
+    if (existingNewInput) {
+      existingNewInput.focus();
+      return;
     }
+
+    // Đóng tất cả menu
+    document.querySelectorAll(".proj-action-menu").forEach((m) => m.remove());
+
+    // Tạo dòng dự án tạm ở cuối danh sách
+    const tempItem = document.createElement("div");
+    tempItem.className = "project-item";
+    tempItem.innerHTML = `
+      <div class="proj-left">
+        <span class="icon">📁</span>
+        <input 
+          type="text" 
+          id="new-project-inline-input" 
+          class="proj-inline-input" 
+          placeholder="Tên dự án..."
+        />
+      </div>
+    `;
+
+    projectListEl.appendChild(tempItem);
+
+    const input = tempItem.querySelector("#new-project-inline-input");
+    input.focus();
+
+    let isHandled = false;
+    const saveNewProject = () => {
+      if (isHandled) return;
+      isHandled = true;
+
+      const name = input.value.trim();
+      if (name) {
+        const newProj = { id: "proj_" + Date.now(), name: name };
+        myProjects.push(newProj);
+        localStorage.setItem("planner_projects", JSON.stringify(myProjects));
+        renderProjectsList();
+      } else {
+        tempItem.remove();
+      }
+    };
+
+    // Nhấn Enter để lưu và mở project, nhấn Escape để hủy
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur(); // Gọi sự kiện blur bên dưới để lưu
+      } else if (e.key === "Escape") {
+        isHandled = true;
+        tempItem.remove();
+      }
+    });
+
+    // Click chuột ra ngoài khoảng trống để lưu
+    input.addEventListener("blur", saveNewProject);
   });
 }
 
@@ -978,23 +1026,74 @@ function renderKanbanBoard() {
   });
 }
 
-// Bắt sự kiện bấm nút + trên cột Việc cần làm
+// Bấm + tạo Task mới trực tiếp ngay trong cột
 if (addKanbanTaskBtn) {
   addKanbanTaskBtn.addEventListener("click", () => {
     if (!currentActiveProjectId) return;
 
-    const title = prompt("Nhập công việc cần làm:");
-    if (title && title.trim()) {
-      kanbanTasks.push({
-        id: "kb_" + Date.now(),
-        project_id: currentActiveProjectId,
-        title: title.trim(),
-        status: "todo",
-      });
+    const todoContainer = document.getElementById("cards-todo");
+    if (!todoContainer) return;
 
-      saveKanbanTasks();
-      renderKanbanBoard();
+    // Nếu đang có ô nhập việc mới chưa lưu
+    const existingInput = todoContainer.querySelector("#new-card-inline-input");
+    if (existingInput) {
+      existingInput.focus();
+      return;
     }
+
+    // Tạo thẻ việc tạm thời chèn lên đầu cột
+    const tempCard = document.createElement("div");
+    tempCard.className = "sample-card";
+    tempCard.innerHTML = `
+      <div class="card-left" style="width: 100%;">
+        <input 
+          type="text" 
+          id="new-card-inline-input" 
+          class="card-inline-input" 
+          placeholder="Nhập tên việc cần làm..."
+        />
+      </div>
+    `;
+
+    todoContainer.prepend(tempCard);
+
+    const input = tempCard.querySelector("#new-card-inline-input");
+    input.focus();
+
+    let isHandled = false;
+    const saveNewTask = () => {
+      if (isHandled) return;
+      isHandled = true;
+
+      const title = input.value.trim();
+      if (title) {
+        kanbanTasks.unshift({
+          id: "kb_" + Date.now(),
+          project_id: currentActiveProjectId,
+          title: title,
+          status: "todo",
+        });
+
+        saveKanbanTasks();
+        renderKanbanBoard(); // Vẽ lại bảng
+      } else {
+        tempCard.remove(); // Bỏ trống
+      }
+    };
+
+    // Lưu
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      } else if (e.key === "Escape") {
+        isHandled = true;
+        tempCard.remove();
+      }
+    });
+
+    // Click chuột ra ngoài
+    input.addEventListener("blur", saveNewTask);
   });
 }
 
@@ -1005,3 +1104,151 @@ document.addEventListener("click", () => {
 
 // Chạy khởi tạo danh sách dự án
 renderProjectsList();
+
+// ====== KHỞI TẠO DOM CHO VIEW TO-DO-LIST ======
+const todolistView = document.getElementById("todolist-view");
+const todolistNavLink = document.getElementById("todolist-nav-link");
+const mydayTaskList = document.getElementById("myday-task-list");
+const mydayDateLabel = document.getElementById("myday-date");
+const mydayQuickInput = document.getElementById("myday-quick-input");
+
+// Hiển thị ngày
+function updateMyDayDateHeader() {
+  if (!mydayDateLabel) return;
+  const now = new Date();
+  const options = { weekday: "long", month: "long", day: "numeric" };
+  mydayDateLabel.textContent = now.toLocaleDateString("en-US", options);
+}
+
+// Chuyển màn hình sang To-Do-List
+function showTodoListView() {
+  if (calendarView) calendarView.classList.add("hidden");
+  if (kanbanView) kanbanView.classList.add("hidden");
+  if (todolistView) todolistView.classList.remove("hidden");
+
+  // Đổi active
+  document
+    .querySelectorAll(".nav-link")
+    .forEach((link) => link.classList.remove("active"));
+  if (todolistNavLink) todolistNavLink.classList.add("active");
+
+  document
+    .querySelectorAll(".project-item")
+    .forEach((el) => el.classList.remove("active"));
+  currentActiveProjectId = null;
+
+  updateMyDayDateHeader();
+  renderMyDayTasks();
+}
+
+// Cập nhật lại showCalendarView và showKanbanView để ẩn To-Do-List
+const originalShowCalendarView = showCalendarView;
+showCalendarView = function () {
+  if (todolistView) todolistView.classList.add("hidden");
+  document
+    .querySelectorAll(".nav-link")
+    .forEach((link) => link.classList.remove("active"));
+  originalShowCalendarView();
+};
+
+const originalShowKanbanView = showKanbanView;
+showKanbanView = function (proj) {
+  if (todolistView) todolistView.classList.add("hidden");
+  document
+    .querySelectorAll(".nav-link")
+    .forEach((link) => link.classList.remove("active"));
+  originalShowKanbanView(proj);
+};
+
+// Bắt sự kiện click vào To-Do-List trên sidebar
+if (todolistNavLink) {
+  todolistNavLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    showTodoListView();
+  });
+}
+
+// Render danh sách công việc hôm nay
+function renderMyDayTasks() {
+  if (!mydayTaskList) return;
+  mydayTaskList.innerHTML = "";
+
+  const todayStr = formatDateString(new Date());
+  const todayTasks = tasks.filter((t) => t.task_date === todayStr);
+
+  if (todayTasks.length === 0) {
+    mydayTaskList.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 0.88rem;">
+        Chưa có công việc nào trong hôm nay. Nhập vào ô phía trên để thêm việc!
+      </div>
+    `;
+    return;
+  }
+
+  todayTasks.forEach((task) => {
+    const item = document.createElement("div");
+    item.className = `myday-task-item ${task.is_completed ? "completed" : ""}`;
+
+    item.innerHTML = `
+      <div class="myday-task-left">
+        <input 
+          type="checkbox" 
+          class="myday-checkbox" 
+          ${task.is_completed ? "checked" : ""} 
+          title="Đánh dấu hoàn thành"
+        />
+        <div class="myday-content">
+          <span class="myday-task-title">${task.title}</span>
+          <span class="myday-task-sub">📅 Hôm nay ${task.time ? `• ⏰ ${task.time}` : ""} ${task.tag ? `• 🏷️ ${task.tag}` : ""}</span>
+        </div>
+      </div>
+      <button class="myday-star-btn" title="Quan trọng">☆</button>
+    `;
+
+    // Tích checkbox
+    const checkbox = item.querySelector(".myday-checkbox");
+    checkbox.addEventListener("change", (e) => {
+      task.is_completed = e.target.checked;
+      saveTasks();
+      renderMyDayTasks();
+      renderCalendar();
+    });
+
+    // Bật/tắt ngôi sao quan trọng
+    const starBtn = item.querySelector(".myday-star-btn");
+    starBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      starBtn.classList.toggle("active");
+      starBtn.textContent = starBtn.classList.contains("active") ? "★" : "☆";
+    });
+
+    mydayTaskList.appendChild(item);
+  });
+}
+
+// Thêm tác vụ bằng phím Enter
+if (mydayQuickInput) {
+  mydayQuickInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const val = mydayQuickInput.value.trim();
+      if (!val) return;
+
+      const newTask = {
+        id: Date.now().toString(),
+        title: val,
+        task_date: formatDateString(new Date()),
+        time: "",
+        tag: "Daily",
+        is_completed: false,
+        created_at: new Date().toISOString(),
+      };
+
+      tasks.unshift(newTask); // Đẩy việc mới lên đầu danh sách
+      saveTasks();
+      mydayQuickInput.value = "";
+      renderMyDayTasks();
+      renderCalendar(); // Đồng bộ sang lịch
+    }
+  });
+}
