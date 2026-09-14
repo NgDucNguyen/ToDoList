@@ -1282,3 +1282,9 @@ if (mydayQuickInput) {
     }
   });
 }
+const brandTitle = document.querySelector(".brand-title");
+if (brandTitle) {
+  brandTitle.addEventListener("click", () => {
+    window.location.reload();
+  });
+}
