@@ -1,0 +1,25 @@
+{
+  "name": "todolist",
+  "version": "1.0.0",
+  "description": "Desktop To-Do & Planner App",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-exe": "electron-packager . MyDailyPlanner --platform=win32 --arch=x64 --out=dist --overwrite --icon=Calendar.ico"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NgDucNguyen/ToDoList.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/NgDucNguyen/ToDoList/issues"
+  },
+  "homepage": "https://github.com/NgDucNguyen/ToDoList#readme",
+  "devDependencies": {
+    "electron": "^44.3.0",
+    "electron-packager": "^17.1.2"
+  }
+}
