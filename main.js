@@ -5,8 +5,8 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: 640,
+    minHeight: 480,
     title: "My Daily Planner",
     icon: path.join(__dirname, "Calendar.ico"),
     autoHideMenuBar: true, // Ẩn thanh menu File/Edit mặc định cho giao diện sạch sẽ
