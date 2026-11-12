@@ -15,6 +15,8 @@ const initialize = `
 window.addEventListener('error',event=>parent.__errors.push(event.message));
 const RealDate=Date; window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:[RealDate.UTC(2026,10,11,5)]));}static now(){return RealDate.UTC(2026,10,11,5);}};
 Object.defineProperty(window,'localStorage',{value:{getItem:key=>parent.__storage[key]??null,setItem:(key,value)=>{parent.__storage[key]=String(value);}}});
+// Synthetic reminders must never reach Windows from the test fixture.
+Object.defineProperty(window,'Notification',{configurable:true,value:class {static permission='denied';}});
 // Electron exposes CommonJS globals in a renderer with nodeIntegration enabled.
 if(parent.__electronMode) window.module={exports:{}};
 `;
@@ -51,6 +53,7 @@ async function browserChecks(source, legacy) {
   let photoFixture='';
   try {
     doc=await load();
+    assert(frame.contentWindow.Notification.permission==='denied','Test notifications were not disabled');
     assert(data().tasks.length===2,'Migration lost legacy tasks');
     assert(data().tasks.find(t=>t.id==='legacy-board').status==='doing','Legacy status lost');
     assert(window.__storage.planner_backup_before_v2,'Missing migration backup');
@@ -71,6 +74,7 @@ async function browserChecks(source, legacy) {
     click(taskSelector(linked.id,'#calendar-grid')+' .task-complete-checkbox');
     click(`[data-project-id="${project.id}"]`);assert(doc.querySelector(taskSelector(linked.id,'#cards-done')),'Completion did not sync to project');
     todo('today');assert(doc.querySelector(taskSelector(linked.id,'#myday-task-list')+' .task-complete-checkbox').checked,'Completion did not sync to To-Do');
+    assert(doc.querySelector('#todo-progress-count').textContent.includes('hoàn thành')&&Number(doc.querySelector('#todo-progress-bar').getAttribute('aria-valuenow'))>0,'Task progress did not update');
     assert(!doc.querySelector('#myday-task-list img, #calendar-grid img, #kanban-view img'),'Task content interpreted as HTML');
     click(taskSelector(linked.id,'#myday-task-list')+' .task-star-btn');assert(!data().tasks.find(t=>t.id===linked.id).is_important,'Star toggle failed');
     click(taskSelector(linked.id,'#myday-task-list')+' .task-star-btn');
@@ -105,6 +109,40 @@ async function browserChecks(source, legacy) {
     const projected=frame.contentWindow.PlannerStore.createStore(frame.contentWindow.localStorage).occurrences('2026-11-11','2026-11-18').filter(t=>t.id===weekly.id);
     assert(JSON.stringify(projected.map(t=>t.task_date))==='["2026-11-11","2026-11-13","2026-11-16","2026-11-18"]','Weekly UI schedule incorrect');
     results.push('Weekly recurrence form with Monday / Wednesday / Friday');
+
+    value('#filter-priority','urgent');calendar();
+    assert(doc.querySelector(taskSelector(linked.id,'#calendar-grid')),'Priority filter hid matching task');
+    value('#filter-status','todo');assert(!doc.querySelector(taskSelector(linked.id,'#calendar-grid')),'Status filter ignored');
+    value('#filter-status','done');assert(doc.querySelector(taskSelector(linked.id,'#calendar-grid')),'Status filter lost matching task');
+    value('#filter-from','2026-11-12');assert(!doc.querySelector(taskSelector(linked.id,'#calendar-grid')),'Date range filter ignored');
+    click('#clear-advanced-filters');
+    assert(doc.querySelector('#filter-priority').value==='ALL'&&doc.querySelector('#filter-status').value==='ALL'&&!doc.querySelector('#filter-from').value,'Clear advanced filters failed');
+    click(`[data-project-id="${project.id}"]`);
+    assert(doc.querySelector(taskSelector(linked.id,'#cards-done')),'Cleared filters still hide project task');
+    const handle=doc.querySelector(taskSelector(linked.id,'#cards-done')+' .kanban-drag-handle');
+    assert(handle,'Kanban drag handle missing');
+    const transfer=new frame.contentWindow.DataTransfer();
+    handle.dispatchEvent(new frame.contentWindow.DragEvent('dragstart',{bubbles:true,dataTransfer:transfer}));
+    const dropColumn=doc.querySelector('#cards-doing');
+    dropColumn.dispatchEvent(new frame.contentWindow.DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:transfer}));
+    dropColumn.dispatchEvent(new frame.contentWindow.DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer}));
+    assert(data().tasks.find(t=>t.id===linked.id).status==='doing'&&doc.querySelector(taskSelector(linked.id,'#cards-doing')),'Kanban drop did not persist status');
+    results.push('Priority/status/date filters and Kanban drag/drop');
+
+    calendar();click('#quick-add-btn');value('#task-text-input','Báo cáo từ mẫu');value('#task-time-input','14:00');value('#task-reminder-input','15');value('#task-template-name','Mẫu báo cáo');click('#save-task-template');
+    const template=JSON.parse(window.__storage.planner_templates_v1)?.[0];
+    assert(template?.name==='Mẫu báo cáo'&&template.values.remind_before==='15','Template was not saved');
+    click('#cancel-task-btn');doc=await load();click('#quick-add-btn');value('#task-template-select',template.id);click('#apply-task-template');
+    assert(doc.querySelector('#task-text-input').value==='Báo cáo từ mẫu'&&doc.querySelector('#task-reminder-input').value==='15','Template was not applied after reload');
+    submit();assert(data().tasks.some(t=>t.title==='Báo cáo từ mẫu'&&t.remind_before===15),'Task created from template lost reminder');
+    click('#quick-add-btn');value('#task-text-input','Nhắc đúng giờ thử nghiệm');
+    const due=new frame.contentWindow.Date(frame.contentWindow.Date.now()+15*60000);
+    value('#task-date-picker',frame.contentWindow.PlannerStore.dateString(due));
+    value('#task-time-input',String(due.getHours()).padStart(2,'0')+':'+String(due.getMinutes()).padStart(2,'0'));
+    value('#task-reminder-input','15');submit();doc=await load();
+    assert(doc.querySelector('#reminder-banner-message').textContent.includes('Nhắc đúng giờ thử nghiệm')&&!doc.querySelector('#reminder-banner').classList.contains('hidden'),'Due reminder did not appear on startup');
+    click('#dismiss-reminder');assert(doc.querySelector('#reminder-banner').classList.contains('hidden'),'Reminder could not be dismissed');
+    results.push('Reusable templates and due reminder after reload');
 
     const tasksBeforePhoto=window.__storage.planner_data_v2;
     await waitFor(()=>doc.body.dataset.appearanceReady==='true','Appearance did not initialize');
@@ -158,6 +196,13 @@ async function browserChecks(source, legacy) {
       doc=await load(width,height);
       await waitFor(()=>doc.body.dataset.appearanceReady==='true','Background not ready during layout check');
       assert(doc.body.classList.contains('has-background'),'Saved photo missing during layout check');
+      if(width<=600){
+        const toggle=doc.querySelector('#sidebar-tools-toggle');
+        assert(toggle.getAttribute('aria-expanded')==='false'&&frame.contentWindow.getComputedStyle(doc.querySelector('#sidebar-tools')).display==='none','Mobile tools did not start collapsed');
+        click('#sidebar-tools-toggle');
+        assert(toggle.getAttribute('aria-expanded')==='true'&&doc.querySelector('.project-item').getBoundingClientRect().height>0,'Mobile tools did not open');
+        click('#sidebar-tools-toggle');
+      }
       const noOverflow=selector=>{const el=doc.querySelector(selector);assert(el.scrollWidth<=el.clientWidth+1,`${width}x${height}: overflow ${selector} ${el.scrollWidth}/${el.clientWidth}`);};
       ['body','.main-content','.topbar','.calendar-card','.calendar-grid','.weekdays-bar'].forEach(noOverflow);
       const header=[...doc.querySelector('.weekdays-bar').children].map(el=>el.getBoundingClientRect());

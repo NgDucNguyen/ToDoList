@@ -1,5 +1,11 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain, Notification } = require("electron");
 const path = require("path");
+
+ipcMain.on("planner:reminder", (event, message) => {
+  if (!BrowserWindow.fromWebContents(event.sender) || !Notification.isSupported()) return;
+  const body = typeof message === "string" ? message.slice(0, 200) : "";
+  if (body) new Notification({ title: "Nhắc việc · Daily Planner", body }).show();
+});
 
 function createWindow() {
   const win = new BrowserWindow({

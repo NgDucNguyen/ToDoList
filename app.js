@@ -15,6 +15,10 @@
   let activeProjectId = "";
   let currentTagFilter = "ALL";
   let searchQuery = "";
+  let priorityFilter = "ALL";
+  let statusFilter = "ALL";
+  let filterFrom = "";
+  let filterTo = "";
   let selectedDate = "";
   let editingTask = null;
   let editingProjectId = "";
@@ -22,6 +26,8 @@
   let confirmAction = null;
   const modalFocus = new Map();
   let noticeTimeout;
+  let draggedKanbanTask = null;
+  const shownReminders = new Set();
   let lastToday = today();
 
   function notice(message, error = false) {
@@ -42,11 +48,78 @@
     document.querySelectorAll("button, input, select, textarea").forEach((element) => { element.disabled = true; });
     return;
   }
+  const TEMPLATE_KEY = "planner_templates_v1";
+  let templates = [];
+  let templatesAvailable = true;
+  try {
+    const stored = localStorage.getItem(TEMPLATE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed) || parsed.some((item) => !item || typeof item.id !== "string" || typeof item.name !== "string" || !item.values || typeof item.values !== "object")) throw new Error("invalid templates");
+      templates = parsed;
+    }
+  } catch {
+    templatesAvailable = false;
+    notice("Không đọc được mẫu công việc đã lưu. Dữ liệu mẫu gốc được giữ nguyên.", true);
+  }
+
+  function renderTemplates() {
+    const select = $("task-template-select"), selected = select.value;
+    select.replaceChildren(new Option("Chọn mẫu đã lưu", ""));
+    templates.forEach((template) => select.add(new Option(template.name, template.id)));
+    select.value = templates.some((template) => template.id === selected) ? selected : "";
+    select.disabled = !templatesAvailable;
+    $("apply-task-template").disabled = !templatesAvailable || !select.value || Boolean(editingTask);
+    $("delete-task-template").disabled = !templatesAvailable || !select.value;
+    $("save-task-template").disabled = !templatesAvailable;
+  }
+
+  function collectTemplateValues() {
+    const frequency = $("task-repeat-input").value;
+    const weekdays = [...$("repeat-weekdays").querySelectorAll("input:checked")].map((input) => Number(input.value));
+    if (frequency === "weekly" && !weekdays.length) throw new Error("Mẫu lặp hằng tuần cần ít nhất một thứ.");
+    return {
+      title: $("task-text-input").value.trim(), time: $("task-time-input").value,
+      remind_before: $("task-reminder-input").value, tag: $("task-tag-input").value,
+      project_id: $("task-project-input").value, status: $("task-status-input").value,
+      priority: $("task-priority-input").value, is_important: $("task-important-input").checked,
+      description: $("task-description-input").value.trim(),
+      checklist: checklistDraft.filter((item) => item.text.trim()).map((item) => item.text.trim()),
+      recurrence: frequency === "none" ? null : { frequency, interval: Number($("task-repeat-interval").value), weekdays },
+    };
+  }
+
+  function applyTemplate(values) {
+    $("task-text-input").value = String(values.title || "");
+    $("task-time-input").value = String(values.time || "");
+    $("task-reminder-input").value = String(values.remind_before ?? "");
+    $("task-tag-input").value = values.tag || "Daily";
+    if ([...$("task-project-input").options].some((option) => option.value === values.project_id)) $("task-project-input").value = values.project_id;
+    $("task-status-input").value = values.status || "todo";
+    $("task-priority-input").value = values.priority || "normal";
+    $("task-important-input").checked = Boolean(values.is_important);
+    $("task-description-input").value = String(values.description || "");
+    checklistDraft = (Array.isArray(values.checklist) ? values.checklist : []).map((text) => ({ id: id(), text: String(text), is_completed: false }));
+    renderChecklistEditor();
+    $("task-repeat-input").value = values.recurrence?.frequency || "none";
+    $("task-repeat-interval").value = values.recurrence?.interval || 1;
+    $("task-repeat-until").value = "";
+    const weekdays = values.recurrence?.weekdays || [parseDate($("task-date-picker").value)?.getDay() ?? new Date().getDay()];
+    $("repeat-weekdays").querySelectorAll("input").forEach((input) => { input.checked = weekdays.includes(Number(input.value)); });
+    updateRepeatFields();
+  }
 
   function normalizeText(value) { return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase(); }
   function filterTasks(rows) {
     const words = normalizeText(searchQuery).trim().split(/\s+/).filter(Boolean);
-    return rows.filter((task) => (currentTagFilter === "ALL" || task.tag === currentTagFilter) && words.every((word) => normalizeText(`${task.title} ${task.description}`).includes(word)));
+    return rows.filter((task) =>
+      (currentTagFilter === "ALL" || task.tag === currentTagFilter) &&
+      (priorityFilter === "ALL" || task.priority === priorityFilter) &&
+      (statusFilter === "ALL" || task.status === statusFilter) &&
+      (!filterFrom || Boolean(task.task_date && task.task_date >= filterFrom)) &&
+      (!filterTo || Boolean(task.task_date && task.task_date <= filterTo)) &&
+      words.every((word) => normalizeText(`${task.title} ${task.description}`).includes(word))
+    );
   }
   function sortTasks(rows) {
     return [...rows].sort((a, b) => Number(a.is_completed) - Number(b.is_completed) || priorityOrder[a.priority] - priorityOrder[b.priority] || Number(b.is_important) - Number(a.is_important) || (a.task_date || "9999").localeCompare(b.task_date || "9999") || (a.time || "99:99").localeCompare(b.time || "99:99") || a.title.localeCompare(b.title, "vi"));
@@ -144,7 +217,23 @@
       Object.entries(statusNames).forEach(([value, label]) => control.add(new Option(label, value)));
       control.value = task.status;
       control.addEventListener("change", () => { safely(() => store.setStatus(task, control.value)); renderAll(); });
-      card.append(control);
+      const handle = document.createElement("span");
+      handle.className = "kanban-drag-handle";
+      handle.textContent = "⋮⋮ Kéo sang cột khác";
+      handle.title = "Kéo để đổi trạng thái công việc";
+      handle.draggable = true;
+      handle.addEventListener("dragstart", (event) => {
+        draggedKanbanTask = task;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", task.id);
+        card.classList.add("dragging");
+      });
+      handle.addEventListener("dragend", () => {
+        draggedKanbanTask = null;
+        card.classList.remove("dragging");
+        document.querySelectorAll("#kanban-view .col-body").forEach((column) => column.classList.remove("drag-over"));
+      });
+      card.append(handle, control);
     }
     return card;
   }
@@ -193,11 +282,19 @@
   function renderTodo() {
     $("todo-view-title").textContent = viewNames[todoView];
     $("myday-date").textContent = todoView === "upcoming" ? `Từ ${friendlyDate(addDays(today(), 1))} đến ${friendlyDate(addDays(today(), 7))}` : todoView === "important" ? "Việc được gắn sao, bao gồm các lần lặp trong 7 ngày tới" : new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    const allTasks = filterTasks(store.todo(todoView));
+    const completed = allTasks.filter((task) => task.is_completed).length;
+    const percent = allTasks.length ? Math.round(completed / allTasks.length * 100) : 0;
+    $("todo-progress-label").textContent = `Tiến độ ${viewNames[todoView].toLowerCase()}`;
+    $("todo-progress-count").textContent = `${completed}/${allTasks.length} hoàn thành`;
+    $("todo-progress-fill").style.width = `${percent}%`;
+    $("todo-progress-bar").setAttribute("aria-valuenow", String(percent));
+    $("todo-progress-bar").setAttribute("aria-valuetext", `${completed} trên ${allTasks.length} công việc hoàn thành`);
     document.querySelectorAll(".todo-tab").forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.view === todoView); tab.setAttribute("aria-selected", String(tab.dataset.view === todoView));
       tab.querySelector("span").textContent = filterTasks(store.todo(tab.dataset.view)).filter((task) => !task.is_completed).length;
     });
-    let tasks = filterTasks(store.todo(todoView));
+    let tasks = allTasks;
     if (!$("show-completed").checked) tasks = tasks.filter((task) => !task.is_completed);
     const list = $("myday-task-list"); list.replaceChildren();
     if (!tasks.length) list.innerHTML = '<div class="empty-day-state">Không có công việc trong mục này.</div>';
@@ -209,11 +306,16 @@
   }
   function showView(view) {
     activeView = view;
+    if (window.matchMedia("(max-width: 600px)").matches) setSidebarToolsOpen(false);
     $("calendar-view").classList.toggle("hidden", view !== "calendar");
     $("kanban-view").classList.toggle("hidden", view !== "project");
     $("todolist-view").classList.toggle("hidden", view !== "todo");
     document.querySelector(".nav-link:not(#todolist-nav-link)").classList.toggle("active", view === "calendar");
     $("todolist-nav-link").classList.toggle("active", view === "todo"); renderAll();
+  }
+  function setSidebarToolsOpen(open) {
+    document.querySelector(".sidebar").classList.toggle("mobile-tools-open", open);
+    $("sidebar-tools-toggle").setAttribute("aria-expanded", String(open));
   }
 
   function renderChecklistEditor(focusLast = false) {
@@ -249,10 +351,12 @@
   }
   function openTaskModal({ task = null, date, projectId = "" } = {}) {
     editingTask = task; $("task-form").reset(); $("task-form-error").classList.add("hidden"); renderProjects();
+    $("task-template-name").value = ""; $("task-template-select").value = ""; renderTemplates();
     $("modal-title").textContent = task ? "Chi tiết công việc" : "Thêm công việc";
     $("task-text-input").value = task?.title || "";
     $("task-date-picker").value = task ? task.task_date : (date ?? today());
     $("task-time-input").value = task?.time || "";
+    $("task-reminder-input").value = task?.remind_before ?? "";
     const tag = task?.tag || (projectId ? "Project" : "Daily");
     if (![...$("task-tag-input").options].some((option) => option.value === tag)) $("task-tag-input").add(new Option(tag, tag));
     $("task-tag-input").value = tag; $("task-project-input").value = task?.project_id || projectId;
@@ -271,12 +375,13 @@
     event.preventDefault();
     try {
       const title = $("task-text-input").value.trim(); if (!title) throw new Error("Hãy nhập tên công việc.");
+      if ($("task-reminder-input").value && (!$('task-date-picker').value || !$('task-time-input').value)) throw new Error("Nhắc việc cần cả ngày và giờ.");
       const scope = $("task-edit-scope").value, frequency = $("task-repeat-input").value;
       const start = editingTask?.recurrence && scope === "series" ? store.state.tasks.find((task) => task.id === editingTask.id).task_date : $("task-date-picker").value;
       const weekdays = [...$("repeat-weekdays").querySelectorAll("input:checked")].map((input) => Number(input.value));
       if (frequency === "weekly" && !weekdays.length) throw new Error("Hãy chọn ít nhất một ngày trong tuần.");
       const patch = {
-        title, task_date: start, time: $("task-time-input").value, tag: $("task-tag-input").value,
+        title, task_date: start, time: $("task-time-input").value, remind_before: $("task-reminder-input").value, tag: $("task-tag-input").value,
         project_id: $("task-project-input").value, status: $("task-status-input").value,
         priority: $("task-priority-input").value, is_important: $("task-important-input").checked,
         description: $("task-description-input").value.trim(), checklist: checklistDraft.filter((item) => item.text.trim()).map((item) => ({ ...item, text: item.text.trim() })),
@@ -305,6 +410,7 @@
       $("task-description-input").value = values.description; $("task-project-input").value = values.project_id;
       $("task-priority-input").value = values.priority; $("task-important-input").checked = values.is_important;
       $("task-time-input").value = values.time; $("task-tag-input").value = values.tag;
+      $("task-reminder-input").value = values.remind_before ?? "";
       checklistDraft = values.checklist.map((item) => ({ ...item })); renderChecklistEditor();
     } updateRepeatFields();
   });
@@ -315,6 +421,34 @@
     }
   });
   $("add-checklist-btn").addEventListener("click", () => { checklistDraft.push({ id: id(), text: "", is_completed: false }); renderChecklistEditor(true); });
+  $("task-template-select").addEventListener("change", renderTemplates);
+  $("apply-task-template").addEventListener("click", () => {
+    if (editingTask) return;
+    const template = templates.find((item) => item.id === $("task-template-select").value);
+    if (template) applyTemplate(template.values);
+  });
+  $("save-task-template").addEventListener("click", () => {
+    if (!templatesAvailable) return;
+    try {
+      const name = $("task-template-name").value.trim();
+      if (!name) throw new Error("Hãy nhập tên mẫu.");
+      const values = collectTemplateValues();
+      if (!values.title) throw new Error("Hãy nhập tên công việc trước khi lưu mẫu.");
+      const next = [...templates, { id: id(), name, values }];
+      localStorage.setItem(TEMPLATE_KEY, JSON.stringify(next));
+      templates = next; renderTemplates(); $("task-template-select").value = next.at(-1).id; renderTemplates();
+      $("task-template-name").value = ""; notice("Đã lưu mẫu công việc.");
+    } catch (error) { notice(error.message || "Không thể lưu mẫu công việc.", true); }
+  });
+  $("delete-task-template").addEventListener("click", () => {
+    const template = templates.find((item) => item.id === $("task-template-select").value);
+    if (!template) return;
+    confirmDelete(`Xóa mẫu “${template.name}”? Công việc đã tạo từ mẫu vẫn được giữ.`, () => {
+      const next = templates.filter((item) => item.id !== template.id);
+      localStorage.setItem(TEMPLATE_KEY, JSON.stringify(next));
+      templates = next; renderTemplates(); notice("Đã xóa mẫu công việc.");
+    });
+  });
   $("delete-task-btn").addEventListener("click", () => {
     const task = editingTask, scope = $("task-edit-scope").value;
     confirmDelete(task.recurrence && scope === "series" ? "Xóa toàn bộ chuỗi và lịch sử các lần lặp?" : `Xóa ${task.recurrence ? "lần lặp này của " : ""}“${task.title}”?`, () => {
@@ -341,6 +475,7 @@
   $("confirm-cancel-btn").addEventListener("click", () => { confirmAction = null; closeModal("confirm-modal"); });
   $("confirm-ok-btn").addEventListener("click", () => { if (!confirmAction) return; const action = confirmAction; confirmAction = null; closeModal("confirm-modal"); safely(action); });
   document.querySelector(".nav-link:not(#todolist-nav-link)").addEventListener("click", (event) => { event.preventDefault(); showView("calendar"); });
+  $("sidebar-tools-toggle").addEventListener("click", () => setSidebarToolsOpen($("sidebar-tools-toggle").getAttribute("aria-expanded") !== "true"));
   $("todolist-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("todo"); });
   document.querySelector(".brand-title").addEventListener("click", () => { viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1); showView("calendar"); });
   $("prev-month-btn").addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); });
@@ -349,6 +484,18 @@
   document.querySelectorAll(".tag-filter-btn").forEach((button) => button.addEventListener("click", () => {
     currentTagFilter = button.dataset.tag; document.querySelectorAll(".tag-filter-btn").forEach((item) => item.classList.toggle("active", item === button)); renderAll();
   }));
+  for (const [elementId, update] of [
+    ["filter-priority", (value) => { priorityFilter = value; }],
+    ["filter-status", (value) => { statusFilter = value; }],
+    ["filter-from", (value) => { filterFrom = value; }],
+    ["filter-to", (value) => { filterTo = value; }],
+  ]) $(elementId).addEventListener("change", (event) => { update(event.target.value); renderAll(); });
+  $("clear-advanced-filters").addEventListener("click", () => {
+    priorityFilter = statusFilter = "ALL"; filterFrom = filterTo = "";
+    for (const elementId of ["filter-priority", "filter-status"]) $(elementId).value = "ALL";
+    for (const elementId of ["filter-from", "filter-to"]) $(elementId).value = "";
+    renderAll();
+  });
   document.querySelectorAll(".todo-tab").forEach((tab) => tab.addEventListener("click", () => {
     todoView = tab.dataset.view;
     if (!$("myday-quick-input").value.trim()) $("myday-date-picker").value = todoView === "upcoming" ? addDays(today(), 1) : todoView === "unscheduled" ? "" : today();
@@ -375,7 +522,56 @@
     }
   });
   function refreshAfterMidnight() { if (lastToday !== today()) { lastToday = today(); $("myday-date-picker").value = today(); renderAll(); } }
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshAfterMidnight(); });
+  function checkReminders() {
+    const now = Date.now();
+    const due = [];
+    for (const task of store.occurrences(addDays(today(), -1), addDays(today(), 1))) {
+      if (task.is_completed || task.remind_before == null || !/^\d{2}:\d{2}$/.test(task.time)) continue;
+      const date = parseDate(task.task_date);
+      if (!date) continue;
+      const [hour, minute] = task.time.split(":").map(Number);
+      if (hour > 23 || minute > 59) continue;
+      date.setHours(hour, minute, 0, 0);
+      const trigger = date.getTime() - task.remind_before * 60000;
+      const key = `${task.id}:${task.occurrence_date || task.task_date}:${task.task_date}:${task.time}:${task.remind_before}`;
+      if (now < trigger || now - trigger > 10 * 60000 || shownReminders.has(key)) continue;
+      shownReminders.add(key);
+      due.push(task);
+    }
+    if (!due.length) return;
+    const message = due.length === 1 ? `${due[0].title} · ${due[0].time}` : `${due.length} công việc sắp đến giờ`;
+    $("reminder-banner-message").textContent = `Nhắc việc: ${message}`;
+    $("reminder-banner").classList.remove("hidden");
+    if (typeof require === "function") {
+      try { require("electron").ipcRenderer.send("planner:reminder", message); } catch { /* Web mode still shows the in-app notice. */ }
+    } else if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification("Nhắc việc · Daily Planner", { body: message });
+    }
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { refreshAfterMidnight(); checkReminders(); } });
+  $("dismiss-reminder").addEventListener("click", () => $("reminder-banner").classList.add("hidden"));
   setInterval(refreshAfterMidnight, 60000);
+  setInterval(checkReminders, 30000);
+  document.querySelectorAll("#kanban-view .col-body").forEach((column) => {
+    column.addEventListener("dragover", (event) => {
+      if (!draggedKanbanTask) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      column.classList.add("drag-over");
+    });
+    column.addEventListener("dragleave", (event) => {
+      if (!column.contains(event.relatedTarget)) column.classList.remove("drag-over");
+    });
+    column.addEventListener("drop", (event) => {
+      event.preventDefault();
+      column.classList.remove("drag-over");
+      const task = draggedKanbanTask;
+      draggedKanbanTask = null;
+      const status = column.closest(".kanban-col")?.dataset.status;
+      if (!task || !status || task.status === status) return;
+      if (safely(() => store.setStatus(task, status))) renderAll();
+    });
+  });
   renderAll();
+  checkReminders();
 })();

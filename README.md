@@ -23,6 +23,13 @@ Nếu PowerShell chặn `npm.ps1`, dùng `npm.cmd` thay cho `npm`.
 
 Xóa một dự án sẽ giữ lại công việc và bỏ liên kết dự án đó.
 
+## Tính năng bổ sung
+
+- Trong dự án, kéo dòng **Kéo sang cột khác** trên thẻ để đổi trạng thái. Menu trạng thái trên thẻ vẫn dùng được khi không kéo thả.
+- Mở **Lọc nâng cao** ở thanh bên để kết hợp ưu tiên, trạng thái và khoảng ngày với bộ lọc nhãn và ô tìm kiếm. Nút **Xóa lọc nâng cao** chỉ đặt lại ba điều kiện này.
+- Trong hộp thêm/sửa công việc, chọn **Nhắc việc** sau khi nhập ngày và giờ. App kiểm tra mỗi 30 giây và nhắc khi thời điểm đến; khi mở app trong vòng 10 phút sau thời điểm nhắc, thông báo cũng xuất hiện. App cần đang chạy để nhắc đúng giờ. Lời nhắc trong app giữ nguyên cho tới khi bạn đóng. Thông báo Windows chỉ hoạt động khi hệ thống và shortcut của app hỗ trợ ([điều kiện của Electron](https://www.electronjs.org/docs/latest/tutorial/notifications)).
+- Trong hộp công việc, nhập tên mẫu và bấm **Lưu mẫu** để lưu nội dung đang điền. Khi tạo công việc mới, chọn mẫu và bấm **Dùng mẫu**. Ngày, ngày kết thúc lặp lại và tiến độ checklist không được chép sang công việc mới. Mẫu lưu trong `planner_templates_v1` cùng hồ sơ ứng dụng; sao lưu toàn bộ `%APPDATA%/todolist` sẽ giữ cả mẫu.
+
 ## Ảnh nền cá nhân
 
 Bấm **Ảnh nền** ở cuối thanh bên (biểu tượng ảnh ở góc trên trên màn hình nhỏ) → **Chọn ảnh từ máy** → chỉnh độ phủ sáng, độ mờ và vị trí → **Áp dụng**. Có thể xem trước trực tiếp; **Hủy** sẽ trả về nền đã lưu. Chọn **Nền mặc định** rồi **Áp dụng** để bỏ ảnh.

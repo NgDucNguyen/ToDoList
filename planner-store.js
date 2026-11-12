@@ -76,6 +76,7 @@
       title: String(source.title || "Công việc chưa có tên"),
       task_date: parseDate(source.task_date) ? source.task_date : "",
       time: typeof source.time === "string" ? source.time : "",
+      remind_before: [0, 5, 15, 60].includes(Number(source.remind_before)) && source.remind_before !== "" && source.remind_before != null ? Number(source.remind_before) : null,
       tag: String(source.tag || "Daily"),
       project_id: source.project_id ? String(source.project_id) : "",
       status,
@@ -238,7 +239,7 @@
           next.status = "todo"; next.is_completed = false;
           // Fields deliberately edited for the whole series replace per-occurrence values.
           for (const override of Object.values(next.occurrences)) {
-            for (const key of ["title", "description", "priority", "is_important", "project_id", "tag", "time"]) if (key in patch) delete override[key];
+            for (const key of ["title", "description", "priority", "is_important", "project_id", "tag", "time", "remind_before"]) if (key in patch) delete override[key];
             if ("checklist" in patch) {
               const old = new Map((override.checklist || []).map((item) => [item.id, item.is_completed]));
               override.checklist = next.checklist.map((item) => ({ ...item, is_completed: old.get(item.id) || false }));

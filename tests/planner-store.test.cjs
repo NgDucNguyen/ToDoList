@@ -172,3 +172,15 @@ test('board chooses the earliest pending date after rescheduling an older occurr
   store.removeTask(task.id,'2026-11-13');
   assert.equal(store.projectTasks(project,'2026-11-11')[0].task_date,'2026-11-14');
 });
+
+test('reminder time persists and can differ for one recurring occurrence', () => {
+  const { store, storage } = setup();
+  const task = recurring(store, { time: '14:00', remind_before: 15 });
+  assert.equal(row(store, '2026-11-11').remind_before, 15);
+  store.updateTask(task.id, { remind_before: 5 }, { date: '2026-11-12' });
+  const loaded = P.createStore(storage);
+  assert.equal(row(loaded, '2026-11-11').remind_before, 15);
+  assert.equal(row(loaded, '2026-11-12').remind_before, 5);
+  assert.equal(row(loaded, '2026-11-13').remind_before, 15);
+  assert.equal(P.normalizeTask({ title: 'Old task' }).remind_before, null);
+});

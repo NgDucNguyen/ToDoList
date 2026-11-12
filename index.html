@@ -9,6 +9,7 @@
   <body>
     <div id="app-background" aria-hidden="true"><div class="background-image"></div><div class="background-veil"></div></div>
     <div id="app-notice" class="app-notice hidden" role="status" aria-live="polite"></div>
+    <div id="reminder-banner" class="reminder-banner hidden" role="alert"><span id="reminder-banner-message"></span><button id="dismiss-reminder" type="button" aria-label="Đóng lời nhắc">×</button></div>
     <div class="dashboard-layout">
       <!-- Khối Sidebar bên trái -->
       <aside class="sidebar">
@@ -26,6 +27,10 @@
             </a>
           </nav>
 
+          <button id="sidebar-tools-toggle" class="sidebar-tools-toggle" type="button" aria-controls="sidebar-tools" aria-expanded="false">
+            <span>Dự án và bộ lọc</span><span class="sidebar-tools-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div id="sidebar-tools" class="sidebar-tools">
           <div class="projects-section-header">
             <div class="section-label">Dự án</div>
             <button
@@ -59,6 +64,17 @@
             <button class="tag-filter-btn tag-Other" data-tag="Other">
               Other
             </button>
+          </div>
+          <details class="advanced-filters" id="advanced-filters">
+            <summary>Lọc nâng cao</summary>
+            <label for="filter-priority">Ưu tiên</label>
+            <select id="filter-priority"><option value="ALL">Tất cả</option><option value="urgent">Khẩn cấp</option><option value="high">Cao</option><option value="normal">Bình thường</option><option value="low">Thấp</option></select>
+            <label for="filter-status">Trạng thái</label>
+            <select id="filter-status"><option value="ALL">Tất cả</option><option value="todo">Cần làm</option><option value="doing">Đang làm</option><option value="done">Hoàn thành</option></select>
+            <label for="filter-from">Từ ngày</label><input id="filter-from" type="date" />
+            <label for="filter-to">Đến ngày</label><input id="filter-to" type="date" />
+            <button id="clear-advanced-filters" type="button" class="btn-outline">Xóa lọc nâng cao</button>
+          </details>
           </div>
         </div>
         <div class="appearance-actions">
@@ -178,6 +194,10 @@
                 </p>
               </div>
             </header>
+            <div class="view-progress" aria-live="polite">
+              <div class="view-progress-copy"><span id="todo-progress-label">Tiến độ hôm nay</span><strong id="todo-progress-count">0/0 hoàn thành</strong></div>
+              <div id="todo-progress-bar" class="view-progress-track" role="progressbar" aria-label="Tiến độ công việc" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="todo-progress-fill"></span></div>
+            </div>
             <div class="todo-tabs" role="tablist" aria-label="Danh sách công việc">
               <button class="todo-tab active" data-view="today" role="tab" aria-selected="true">Hôm nay <span></span></button>
               <button class="todo-tab" data-view="upcoming" role="tab" aria-selected="false">Sắp tới <span></span></button>
@@ -284,6 +304,11 @@
 
         <form id="task-form">
           <input type="hidden" id="task-date-input" />
+          <div class="task-template-tools">
+            <label for="task-template-select">Mẫu công việc dùng lại</label>
+            <div class="task-template-row"><select id="task-template-select"><option value="">Chọn mẫu đã lưu</option></select><button type="button" id="apply-task-template" class="btn-outline">Dùng mẫu</button></div>
+            <div class="task-template-row"><input id="task-template-name" type="text" maxlength="100" placeholder="Tên mẫu mới" aria-label="Tên mẫu công việc" /><button type="button" id="save-task-template" class="btn-outline">Lưu mẫu</button><button type="button" id="delete-task-template" class="btn-outline danger-text">Xóa mẫu</button></div>
+          </div>
 
           <div class="form-group">
             <label for="task-text-input">Tên công việc</label>
@@ -311,6 +336,11 @@
               <label for="task-time-input">Thời gian</label>
               <input type="time" id="task-time-input" name="taskTime" />
             </div>
+          </div>
+          <div class="form-group">
+            <label for="task-reminder-input">Nhắc việc</label>
+            <select id="task-reminder-input"><option value="">Không nhắc</option><option value="0">Đúng giờ</option><option value="5">Trước 5 phút</option><option value="15">Trước 15 phút</option><option value="60">Trước 1 giờ</option></select>
+            <p class="view-hint">Thông báo khi ứng dụng đang mở; công việc cần có ngày và giờ.</p>
           </div>
 
           <!-- Nhãn Tag công việc -->
