@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,22 +7,27 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <div id="app-background" aria-hidden="true"><div class="background-image"></div><div class="background-veil"></div></div>
+    <div id="app-notice" class="app-notice hidden" role="status" aria-live="polite"></div>
     <div class="dashboard-layout">
       <!-- Khối Sidebar bên trái -->
       <aside class="sidebar">
         <div class="sidebar-top">
-          <h1 class="brand-title">MY DAILY PLANNER</h1>
+          <div class="brand-lockup">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="4"/><path d="M8 3v4m8-4v4M4 11h16m-12 5 2 2 5-5"/></svg></span>
+            <div><h1 class="brand-title">Daily Planner</h1><p class="brand-caption">Kế hoạch mỗi ngày</p></div>
+          </div>
           <nav class="nav-manu">
             <a href="#" class="nav-link active">
-              <span class="icon">📅</span> Calendar
+              <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 4h2m4 0h2m-8 3h2"/></svg></span> Lịch
             </a>
             <a href="#" class="nav-link" id="todolist-nav-link">
-              <span class="icon">☑️</span> To-Do-List
+              <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="m7 12 3 3 7-7"/></svg></span> Công việc
             </a>
           </nav>
 
           <div class="projects-section-header">
-            <div class="section-label">PROJECTS</div>
+            <div class="section-label">Dự án</div>
             <button
               id="add-project-btn"
               class="icon-add-proj"
@@ -33,7 +38,7 @@
           </div>
           <div class="project-list" id="project-list"></div>
 
-          <div class="section-label">TAGS FILTER</div>
+          <div class="section-label">Lọc theo nhãn</div>
           <div class="tag-filter-list" id="tag-filter-list">
             <button class="tag-filter-btn active" data-tag="ALL">Tất cả</button>
             <button class="tag-filter-btn tag-Daily" data-tag="Daily">
@@ -56,6 +61,11 @@
             </button>
           </div>
         </div>
+        <div class="appearance-actions">
+          <button id="open-appearance-btn" class="appearance-trigger" type="button" aria-label="Tùy chỉnh ảnh nền" title="Tùy chỉnh ảnh nền">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 3-3 6 6"/></svg><span>Ảnh nền</span>
+          </button>
+        </div>
       </aside>
 
       <main class="main-content">
@@ -64,23 +74,25 @@
             <div class="date-controls">
               <h2 id="current-month-year">Tháng --, ----</h2>
               <div class="nav-btn-group">
-                <button id="prev-month-btn" class="btn-nav">&lt;</button>
-                <button id="next-month-btn" class="btn-nav">&gt;</button>
+                <button id="prev-month-btn" class="btn-nav" aria-label="Tháng trước"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 7-5 5 5 5"/></svg></button>
+                <button id="next-month-btn" class="btn-nav" aria-label="Tháng sau"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 7 5 5-5 5"/></svg></button>
               </div>
             </div>
 
             <div class="topbar-actions">
               <!-- Search việc -->
               <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg>
                 <input
                   type="text"
                   id="search-input"
                   placeholder="Tìm việc..."
+                  aria-label="Tìm công việc"
                 />
               </div>
 
               <button id="quick-add-btn" class="btn-primary">
-                + Add Event/Task
+                + Thêm công việc
               </button>
             </div>
           </header>
@@ -104,6 +116,12 @@
         <div id="kanban-view" class="hidden">
           <header class="project-header">
             <h1 id="kanban-project-title">Tên dự án</h1>
+            <div class="project-toolbar">
+              <span id="project-summary" class="text-muted-sm"></span>
+              <button id="rename-project-btn" class="btn-outline">Đổi tên</button>
+              <button id="delete-project-btn" class="btn-outline danger-text">Xóa dự án</button>
+            </div>
+            <p class="view-hint">Việc lặp lại hiển thị lần chưa hoàn thành gần nhất. Các lần khác có thể xem trên lịch.</p>
           </header>
 
           <div class="kanban-grid-layout">
@@ -154,12 +172,23 @@
           <div class="myday-container">
             <header class="myday-header">
               <div>
-                <h1 class="myday-title">Ngày của Tôi</h1>
+                <h1 class="myday-title" id="todo-view-title">Hôm nay</h1>
                 <p id="myday-date" class="myday-subtitle">
                   Sunday, September 13
                 </p>
               </div>
             </header>
+            <div class="todo-tabs" role="tablist" aria-label="Danh sách công việc">
+              <button class="todo-tab active" data-view="today" role="tab" aria-selected="true">Hôm nay <span></span></button>
+              <button class="todo-tab" data-view="upcoming" role="tab" aria-selected="false">Sắp tới <span></span></button>
+              <button class="todo-tab" data-view="overdue" role="tab" aria-selected="false">Quá hạn <span></span></button>
+              <button class="todo-tab" data-view="important" role="tab" aria-selected="false">⭐ Quan trọng <span></span></button>
+              <button class="todo-tab" data-view="unscheduled" role="tab" aria-selected="false">Chưa lên lịch <span></span></button>
+            </div>
+            <div class="todo-toolbar">
+              <label class="inline-checkbox"><input type="checkbox" id="show-completed" checked />Hiện việc đã hoàn thành</label>
+              <button id="todo-add-btn" class="btn-primary">+ Thêm đầy đủ</button>
+            </div>
 
             <!-- Khối thêm việc nhanh với thanh tùy chọn động -->
             <div class="myday-add-wrapper">
@@ -197,6 +226,9 @@
                     <option value="Other">Other</option>
                   </select>
                 </div>
+                <div class="myday-opt-item">
+                  <select id="myday-project-picker" aria-label="Dự án"><option value="">Không thuộc dự án</option></select>
+                </div>
               </div>
             </div>
 
@@ -208,7 +240,7 @@
     </div>
 
     <!-- Pop-up xem việc trong ngày -->
-    <div id="day-details-modal" class="modal-backdrop hidden">
+    <div id="day-details-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="day-details-title">
       <div class="modal-card day-details-card">
         <div class="modal-header">
           <div>
@@ -243,7 +275,7 @@
     </div>
 
     <!-- POP-UP THÊM/SỬA CÔNG VIỆC -->
-    <div id="task-modal" class="modal-backdrop hidden">
+    <div id="task-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal-card">
         <div class="modal-header">
           <h3 id="modal-title">Thêm công việc</h3>
@@ -268,12 +300,11 @@
           <!-- Hàng nhập ngày và giờ cụ thể -->
           <div class="form-row">
             <div class="form-group">
-              <label for="task-date-picker">Ngày</label>
+            <label for="task-date-picker">Ngày / hạn hoàn thành</label>
               <input
                 type="date"
                 id="task-date-picker"
                 name="taskDate"
-                required
               />
             </div>
             <div class="form-group">
@@ -295,7 +326,67 @@
             </select>
           </div>
 
+          <div class="form-row">
+            <div class="form-group">
+              <label for="task-project-input">Dự án</label>
+              <select id="task-project-input"><option value="">Không thuộc dự án</option></select>
+            </div>
+            <div class="form-group">
+              <label for="task-status-input">Trạng thái</label>
+              <select id="task-status-input">
+                <option value="todo">Việc cần làm</option>
+                <option value="doing">Đang thực hiện</option>
+                <option value="done">Hoàn thành</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="task-priority-input">Mức ưu tiên</label>
+              <select id="task-priority-input">
+                <option value="low">Thấp</option>
+                <option value="normal" selected>Bình thường</option>
+                <option value="high">Cao</option>
+                <option value="urgent">Khẩn cấp</option>
+              </select>
+            </div>
+            <label class="inline-checkbox important-label"><input type="checkbox" id="task-important-input" />⭐ Công việc quan trọng</label>
+          </div>
+          <div class="form-group">
+            <label for="task-description-input">Mô tả / ghi chú</label>
+            <textarea id="task-description-input" rows="3" placeholder="Nội dung, đường dẫn tài liệu, lưu ý..."></textarea>
+          </div>
+          <div class="form-group">
+            <div class="checklist-heading"><label>Các bước cần làm <span id="checklist-progress"></span></label><button type="button" id="add-checklist-btn" class="btn-outline">+ Thêm bước</button></div>
+            <div id="task-checklist-editor" class="checklist-editor"></div>
+          </div>
+          <div id="recurrence-edit-scope" class="form-group hidden">
+            <label for="task-edit-scope">Áp dụng thay đổi</label>
+            <select id="task-edit-scope"><option value="occurrence">Chỉ lần này</option><option value="series">Cả chuỗi lặp lại</option></select>
+            <p class="view-hint" id="recurrence-scope-hint"></p>
+          </div>
+          <fieldset class="recurrence-fields">
+            <legend>Lặp lại</legend>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="task-repeat-input">Tần suất</label>
+                <select id="task-repeat-input"><option value="none">Không lặp lại</option><option value="daily">Hằng ngày</option><option value="weekly">Hằng tuần</option><option value="monthly">Hằng tháng</option></select>
+              </div>
+              <div id="repeat-interval-group" class="form-group hidden">
+                <label for="task-repeat-interval">Mỗi bao nhiêu <span id="repeat-interval-unit">ngày</span>?</label>
+                <input type="number" id="task-repeat-interval" min="1" max="365" value="1" />
+              </div>
+            </div>
+            <div id="repeat-weekdays" class="repeat-weekdays hidden" aria-label="Ngày lặp trong tuần">
+              <label><input type="checkbox" value="1" />T2</label><label><input type="checkbox" value="2" />T3</label><label><input type="checkbox" value="3" />T4</label><label><input type="checkbox" value="4" />T5</label><label><input type="checkbox" value="5" />T6</label><label><input type="checkbox" value="6" />T7</label><label><input type="checkbox" value="0" />CN</label>
+            </div>
+            <div id="repeat-until-group" class="form-group hidden"><label for="task-repeat-until">Lặp đến hết ngày (để trống nếu không giới hạn)</label><input type="date" id="task-repeat-until" /></div>
+            <p id="repeat-help" class="view-hint hidden">Mỗi lần có trạng thái và checklist riêng. Lặp theo tháng vào cuối tháng nếu tháng đó không có ngày tương ứng.</p>
+          </fieldset>
+          <p id="task-form-error" class="form-error hidden" role="alert"></p>
+
           <div class="modal-actions">
+            <button type="button" id="delete-task-btn" class="btn-outline danger-text hidden">Xóa công việc</button>
             <button type="button" id="cancel-task-btn" class="btn-outline">
               Hủy
             </button>
@@ -307,6 +398,33 @@
       </div>
     </div>
 
+    <div id="project-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
+      <div class="modal-card small-modal"><h3 id="project-modal-title">Thêm dự án</h3><form id="project-form"><div class="form-group"><label for="project-name-input">Tên dự án</label><input id="project-name-input" required maxlength="200" /></div><p id="project-form-error" class="form-error hidden" role="alert"></p><div class="modal-actions"><button type="button" id="cancel-project-btn" class="btn-outline">Hủy</button><button class="btn-primary" type="submit">Lưu dự án</button></div></form></div>
+    </div>
+    <div id="confirm-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="modal-card small-modal"><h3 id="confirm-title">Xác nhận xóa</h3><p id="confirm-message"></p><div class="modal-actions"><button id="confirm-cancel-btn" class="btn-outline">Hủy</button><button id="confirm-ok-btn" class="btn-primary">Xóa</button></div></div>
+    </div>
+    <dialog id="appearance-dialog" class="modal-card appearance-dialog" aria-labelledby="appearance-title">
+      <div class="modal-header"><div><h3 id="appearance-title">Ảnh nền của bạn</h3><p class="view-hint">Chọn một góc nhìn cho ngày mới.</p></div><button type="button" id="close-appearance-btn" class="close-x-btn" aria-label="Đóng tùy chỉnh ảnh nền">✕</button></div>
+      <div id="background-preview" class="background-preview">
+        <img id="background-preview-image" alt="Xem trước ảnh nền đã chọn" hidden />
+        <div id="background-preview-veil" class="background-preview-veil" hidden></div>
+        <span id="background-preview-empty">Nền mặc định</span>
+      </div>
+      <div class="background-file-row"><button type="button" id="choose-background-btn" class="btn-outline">Chọn ảnh từ máy</button><span id="background-file-name" class="text-muted-sm">Chưa chọn ảnh</span></div>
+      <input type="file" id="background-file-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden />
+      <p class="view-hint">JPG, PNG hoặc WebP · Tối đa 20 MB. Ảnh chỉ được lưu trên máy của bạn.</p>
+      <fieldset id="background-controls" class="background-controls" disabled>
+        <div class="background-setting"><label for="background-overlay">Độ phủ sáng <output id="background-overlay-value" for="background-overlay">35%</output></label><input type="range" id="background-overlay" min="10" max="85" step="1" value="35" /></div>
+        <div class="background-setting"><label for="background-blur">Làm mờ ảnh <output id="background-blur-value" for="background-blur">0 px</output></label><input type="range" id="background-blur" min="0" max="12" step="1" value="0" /></div>
+        <div class="background-setting"><label for="background-position">Vị trí ảnh</label><select id="background-position"><option value="center">Căn giữa</option><option value="top">Ưu tiên phía trên</option><option value="bottom">Ưu tiên phía dưới</option></select></div>
+      </fieldset>
+      <p id="background-error" class="form-error hidden" role="alert"></p>
+      <div class="modal-actions appearance-footer"><button type="button" id="reset-background-btn" class="btn-outline">Nền mặc định</button><button type="button" id="cancel-appearance-btn" class="btn-outline">Hủy</button><button type="button" id="save-background-btn" class="btn-primary">Áp dụng</button></div>
+    </dialog>
+    <script src="planner-store.js"></script>
+    <script src="lunar.js"></script>
     <script src="app.js"></script>
+    <script src="appearance.js"></script>
   </body>
 </html>

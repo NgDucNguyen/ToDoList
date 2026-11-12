@@ -5,7 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build-exe": "electron-packager . MyDailyPlanner --platform=win32 --arch=x64 --out=dist --overwrite --icon=Calendar.ico"
+    "test": "node --test tests/planner-store.test.cjs",
+    "test:ui": "node scripts/check-ui.cjs",
+    "test:electron": "node scripts/check-electron.cjs",
+    "build-exe": "node scripts/build-exe.cjs"
   },
   "repository": {
     "type": "git",
