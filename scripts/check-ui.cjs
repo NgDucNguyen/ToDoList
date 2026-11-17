@@ -10,7 +10,7 @@ const renderer = path.join(__dirname, 'render-checks.cjs');
 const runtimeEnv = { ...process.env };
 delete runtimeEnv.ELECTRON_RUN_AS_NODE;
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('<link rel="stylesheet" href="style.css" />', () => '<style>' + fs.readFileSync(path.join(root, 'style.css'), 'utf8') + '</style>');
-for (const name of ['planner-store.js', 'lunar.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
+for (const name of ['planner-store.js', 'lunar.js', 'hust-ui.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
 const initialize = `
 window.addEventListener('error',event=>parent.__errors.push(event.message));
 const RealDate=Date; window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:[RealDate.UTC(2026,10,11,5)]));}static now(){return RealDate.UTC(2026,10,11,5);}};
@@ -19,6 +19,7 @@ Object.defineProperty(window,'localStorage',{value:{getItem:key=>parent.__storag
 Object.defineProperty(window,'Notification',{configurable:true,value:class {static permission='denied';}});
 // Electron exposes CommonJS globals in a renderer with nodeIntegration enabled.
 if(parent.__electronMode) window.module={exports:{}};
+if(parent.__hustMock) window.require=name=>{if(name!=='electron')throw new Error('Unexpected module');return {ipcRenderer:{invoke:(channel,arg)=>parent.__hustMock(channel,arg)}};};
 `;
 html = html.replace('<head>', () => '<head><script>' + initialize + '</script>');
 const old = {
@@ -47,7 +48,7 @@ async function browserChecks(source, legacy) {
   const checked=(selector,bool)=>{const el=doc.querySelector(selector);el.checked=bool;el.dispatchEvent(new frame.contentWindow.Event('change',{bubbles:true}));};
   const submit=()=>{doc.querySelector('#task-form').requestSubmit();assert(doc.querySelector('#task-modal').classList.contains('hidden'),'Save failed: '+doc.querySelector('#task-form-error').textContent);};
   const taskSelector=(taskId,container='')=>`${container} [data-task-id="${taskId}"]`;
-  const calendar=()=>click('.nav-link:not(#todolist-nav-link)');
+  const calendar=()=>click('#calendar-nav-link');
   const todo=mode=>{click('#todolist-nav-link');click(`.todo-tab[data-view="${mode}"]`);};
   const add=(title,date)=>{calendar();click('#quick-add-btn');value('#task-text-input',title);value('#task-date-picker',date);submit();return data().tasks.find(t=>t.title===title);};
   let photoFixture='';
@@ -124,10 +125,33 @@ async function browserChecks(source, legacy) {
     const transfer=new frame.contentWindow.DataTransfer();
     handle.dispatchEvent(new frame.contentWindow.DragEvent('dragstart',{bubbles:true,dataTransfer:transfer}));
     const dropColumn=doc.querySelector('#cards-doing');
+    assert(!dropColumn.children.length&&dropColumn.getBoundingClientRect().height>=100,'Empty Kanban column has no usable drop area');
     dropColumn.dispatchEvent(new frame.contentWindow.DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:transfer}));
     dropColumn.dispatchEvent(new frame.contentWindow.DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer}));
     assert(data().tasks.find(t=>t.id===linked.id).status==='doing'&&doc.querySelector(taskSelector(linked.id,'#cards-doing')),'Kanban drop did not persist status');
+    const movingCard=doc.querySelector(taskSelector(linked.id,'#cards-doing'));
+    movingCard.dispatchEvent(new frame.contentWindow.DragEvent('dragstart',{bubbles:true,dataTransfer:transfer}));
+    const doneHeader=doc.querySelector('.kanban-col[data-status="done"] .col-head');
+    doneHeader.dispatchEvent(new frame.contentWindow.DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:transfer}));
+    doneHeader.dispatchEvent(new frame.contentWindow.DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer}));
+    assert(data().tasks.find(t=>t.id===linked.id).is_completed&&doc.querySelector(taskSelector(linked.id,'#cards-done')),'Dragging card onto column header failed');
+    click(taskSelector(linked.id,'#cards-done')+' .task-complete-checkbox');
+    assert(data().tasks.find(t=>t.id===linked.id).status==='todo'&&!data().tasks.find(t=>t.id===linked.id).is_completed,'Unchecking completed Kanban task did not move it back');
+    click(taskSelector(linked.id,'#cards-todo')+' .task-complete-checkbox');
+    doc=await load();click(`[data-project-id="${project.id}"]`);
+    assert(doc.querySelector(taskSelector(linked.id,'#cards-done')+' .task-complete-checkbox').checked,'Checkbox completion did not persist after reload');
     results.push('Priority/status/date filters and Kanban drag/drop');
+
+    const fixture=data();
+    for(let i=0;i<12;i++)fixture.tasks.push({id:'scroll-fixture-'+i,title:'Kiểm thử cuộn '+i,project_id:project.id,status:'todo'});
+    window.__storage.planner_data_v2=JSON.stringify(fixture);doc=await load();click(`[data-project-id="${project.id}"]`);
+    const scrolling=doc.querySelector('#cards-todo');scrolling.scrollTop=180;
+    const scrollBefore=scrolling.scrollTop;assert(scrollBefore>0,'Scroll regression fixture did not overflow');
+    click(taskSelector('scroll-fixture-4','#cards-todo')+' .task-complete-checkbox');
+    assert(Math.abs(scrolling.scrollTop-scrollBefore)<=1,'Checking task reset Kanban column scroll');
+    const cleanup=data();cleanup.tasks=cleanup.tasks.filter(task=>!task.id.startsWith('scroll-fixture-'));
+    window.__storage.planner_data_v2=JSON.stringify(cleanup);doc=await load();
+    results.push('Empty-column/header drops, checkbox reversal/reload and preserved column scroll');
 
     calendar();click('#quick-add-btn');value('#task-text-input','Báo cáo từ mẫu');value('#task-time-input','14:00');value('#task-reminder-input','15');value('#task-template-name','Mẫu báo cáo');click('#save-task-template');
     const template=JSON.parse(window.__storage.planner_templates_v1)?.[0];
@@ -143,6 +167,78 @@ async function browserChecks(source, legacy) {
     assert(doc.querySelector('#reminder-banner-message').textContent.includes('Nhắc đúng giờ thử nghiệm')&&!doc.querySelector('#reminder-banner').classList.contains('hidden'),'Due reminder did not appear on startup');
     click('#dismiss-reminder');assert(doc.querySelector('#reminder-banner').classList.contains('hidden'),'Reminder could not be dismissed');
     results.push('Reusable templates and due reminder after reload');
+
+    const beforeHust=window.__storage.planner_data_v2;
+    let backupFails=false,readFails=false;const ipcCalls=[];
+    let hustFixture={status:'ready',account:'a'.repeat(24),term:'20261',complete:true,classes:2,unscheduled:[{title:'Lớp chưa có lịch',classId:'000002'}],events:[{uid:'fixture-class:1:2026-11-11',title:'HUST <img src=x>',date:'2026-11-11',time:'06:45',endTime:'10:05',classId:'000001',courseId:'IT0000',classType:'LT',room:'D9-101'}]};
+    window.__hustMock=async(channel,arg)=>{ipcCalls.push(channel);if(channel==='hust:read'){if(readFails)throw new Error('Phiên HUST đã hết hạn');return JSON.parse(JSON.stringify(hustFixture));}if(channel==='hust:backup'){if(backupFails)throw new Error('Sao lưu thất bại');assert(JSON.parse(arg).version===2,'Invalid sync backup');return 'backup.json';}return true;};
+    doc=await load();click('#open-hust-btn');assert(doc.querySelector('#hust-dialog').open,'HUST dialog did not open');
+    assert(!doc.querySelector('#hust-auto-sync').checked&&doc.querySelector('#hust-auto-sync').disabled,'Auto sync enabled before first import');
+    click('#hust-connect-btn');await waitFor(()=>!doc.querySelector('#hust-connect-btn').disabled,'Connect button stayed busy');
+    click('#hust-read-btn');await waitFor(()=>!doc.querySelector('#hust-apply-btn').disabled,'HUST preview not ready');
+    assert(window.__storage.planner_data_v2===beforeHust,'Preview changed planner data');assert(!doc.querySelector('#hust-preview-rows img'),'HUST title interpreted as HTML');
+    backupFails=true;click('#hust-apply-btn');await waitFor(()=>doc.querySelector('#hust-status').classList.contains('error'),'Backup failure not shown');
+    assert(window.__storage.planner_data_v2===beforeHust,'Failed backup still applied sync');
+    backupFails=false;click('#hust-apply-btn');await waitFor(()=>data().tasks.some(task=>task.source?.provider==='hust'),'HUST import did not persist');
+    const imported=data().tasks.find(task=>task.source?.provider==='hust');assert(imported.location==='D9-101'&&imported.end_time==='10:05','Imported location/time lost');
+    assert(ipcCalls.includes('hust:connect')&&ipcCalls.includes('hust:backup'),'Desktop connector not invoked');
+    assert(!doc.querySelector('#hust-auto-sync').disabled,'Auto sync unavailable after import');checked('#hust-auto-sync',true);click('#close-hust-btn');
+    calendar();assert(!doc.querySelector(taskSelector(imported.id,'#calendar-grid')),'HUST lesson leaked into personal calendar');
+    todo('today');assert(!doc.querySelector(taskSelector(imported.id,'#myday-task-list')),'HUST lesson leaked into personal tasks');
+    click('#hust-calendar-nav-link');assert(!doc.querySelector('#hust-calendar-view').classList.contains('hidden'),'HUST calendar did not open');
+    assert(doc.querySelector(taskSelector(imported.id,'#hust-calendar-grid')),'Imported lesson missing from separate HUST calendar');
+    assert(!data().projects.some(project=>project.source?.provider==='hust'),'Sync recreated a HUST project');
+    click(taskSelector(imported.id,'#hust-calendar-grid')+' .task-complete-checkbox');
+    const personalMonth=doc.querySelector('#current-month-year').textContent;
+    click('#hust-next-month-btn');calendar();assert(doc.querySelector('#current-month-year').textContent===personalMonth,'HUST navigation changed personal calendar month');
+    click('#hust-calendar-nav-link');click('#hust-prev-month-btn');
+    click('#hust-add-lesson-btn');assert(doc.querySelector('#task-calendar-input').value==='hust','Manual lesson defaults to the wrong calendar');
+    value('#task-text-input','Học bù tự thêm');value('#task-date-picker','2026-11-11');submit();
+    const manualLesson=data().tasks.find(task=>task.title==='Học bù tự thêm');
+    assert(manualLesson.calendar_id==='hust'&&!manualLesson.source,'Manual lesson was marked as a synced lesson');
+    assert(doc.querySelector(taskSelector(manualLesson.id,'#hust-calendar-grid')),'Manual lesson missing from HUST calendar');
+    value('#hust-search-input','000001');assert(!doc.querySelector(taskSelector(manualLesson.id,'#hust-calendar-grid'))&&doc.querySelector(taskSelector(imported.id,'#hust-calendar-grid')),'HUST class search did not stay within the school calendar');value('#hust-search-input','');
+    hustFixture.events[0]={...hustFixture.events[0],date:'2026-11-12',room:'D5-404',changed:true};
+    click('#open-hust-btn');click('#hust-read-btn');await waitFor(()=>!doc.querySelector('#hust-apply-btn').disabled,'Second preview not ready');click('#hust-apply-btn');
+    await waitFor(()=>data().tasks.find(task=>task.id===imported.id).task_date==='2026-11-12','Reschedule did not update');
+    assert(data().tasks.filter(task=>task.source?.provider==='hust').length===1&&data().tasks.find(task=>task.id===imported.id).is_completed,'Sync duplicated task or cleared completion');
+    assert(data().tasks.find(task=>task.id===manualLesson.id)?.title==='Học bù tự thêm','Sync removed the manual makeup lesson');
+    const beforeFullPreview=window.__storage.planner_data_v2;
+    hustFixture.events.push(...Array.from({length:135},(_,index)=>({...hustFixture.events[0],uid:'full-semester:'+index,title:'Buổi học '+index,date:frame.contentWindow.PlannerStore.addDays('2026-12-05',index),changed:false})));
+    // Return unsorted data so the displayed range and last row must use the
+    // full sorted timetable, rather than the original first/last positions.
+    hustFixture.events.reverse();
+    click('#hust-read-btn');await waitFor(()=>!doc.querySelector('#hust-apply-btn').disabled,'Full-semester preview not ready');
+    assert(doc.querySelectorAll('#hust-preview-rows tr').length===136,'Preview truncated lessons after the first 100');
+    assert(doc.querySelector('#hust-preview-rows tr:last-child td').textContent==='18/04/2027','Late-semester lesson missing from preview');
+    assert(doc.querySelector('#hust-preview-summary').textContent.includes('từ 12/11/2026 đến 18/04/2027'),'Full timetable date range not shown');
+    assert(window.__storage.planner_data_v2===beforeFullPreview,'Full-semester preview changed saved tasks');
+    click('#hust-apply-btn');await waitFor(()=>data().tasks.filter(task=>task.source?.provider==='hust').length===136,'Import truncated lessons after the first 100');
+    assert(data().tasks.some(task=>task.source?.uid==='full-semester:134'&&task.task_date==='2027-04-18'),'Last lesson was not saved');
+    const afterHust=window.__storage.planner_data_v2;readFails=true;click('#hust-read-btn');await waitFor(()=>doc.querySelector('#hust-status').textContent.includes('hết hạn'),'Expired session not shown');
+    assert(window.__storage.planner_data_v2===afterHust,'Expired session changed saved tasks');
+    click('#hust-disconnect-btn');await waitFor(()=>ipcCalls.includes('hust:disconnect')&&!doc.querySelector('#hust-disconnect-btn').disabled,'Disconnect failed');
+    assert(!JSON.parse(window.__storage.planner_hust_settings_v1).auto,'Disconnect left auto sync enabled');
+    const oldSchoolState=data();
+    oldSchoolState.projects.push({id:'old-school-project',name:'Lịch học HUST · 20261',source:{provider:'hust'}},{id:'user-school-name',name:'Lịch học HUST tự đặt'});
+    oldSchoolState.tasks.find(task=>task.id===imported.id).project_id='old-school-project';
+    const oldManual=oldSchoolState.tasks.find(task=>task.id===manualLesson.id);oldManual.project_id='old-school-project';delete oldManual.calendar_id;
+    const beforeCalendarMigration=JSON.stringify(oldSchoolState);window.__storage.planner_data_v2=beforeCalendarMigration;
+    doc=await load();
+    assert(window.__storage.planner_backup_before_hust_calendar===beforeCalendarMigration,'Calendar migration did not save an exact backup');
+    assert(!doc.querySelector('[data-project-id="old-school-project"]')&&doc.querySelector('[data-project-id="user-school-name"]'),'Migration removed the wrong project');
+    assert(data().tasks.find(task=>task.id===imported.id).is_completed,'Calendar migration cleared completion');
+    click('#hust-calendar-nav-link');assert(doc.querySelector(taskSelector(manualLesson.id,'#hust-calendar-grid')),'Migration lost the manually added school lesson');
+    click(taskSelector(manualLesson.id,'#hust-calendar-grid')+' .task-open-btn');value('#task-calendar-input','personal');submit();
+    assert(!doc.querySelector(taskSelector(manualLesson.id,'#hust-calendar-grid')),'Moved manual lesson remained in school calendar');
+    calendar();click('#calendar-grid .day-cell[data-date="2026-11-11"]');
+    assert(doc.querySelector(taskSelector(manualLesson.id,'#day-details-task-list')),'Moved lesson missing from personal day details');
+    assert(!doc.querySelector(taskSelector(imported.id,'#day-details-task-list')),'School lesson leaked into personal day details');
+    click(taskSelector(manualLesson.id,'#day-details-task-list')+' .task-open-btn');value('#task-calendar-input','hust');submit();click('#day-details-close-btn');
+    click('#hust-calendar-nav-link');assert(doc.querySelector(taskSelector(manualLesson.id,'#hust-calendar-grid')),'Moving a manual lesson back to HUST failed');
+    window.__hustMock=null;window.__storage.planner_data_v2=beforeHust;delete window.__storage.planner_hust_settings_v1;doc=await load();
+    results.push('Full HUST preview/import beyond 100 lessons, date range, local backup failure, safe import, reschedule preserving completion, expired session and disconnect');
+    results.push('Separate personal/HUST calendars, independent months and search, manual school lessons, migration backup and calendar reassignment');
 
     const tasksBeforePhoto=window.__storage.planner_data_v2;
     await waitFor(()=>doc.body.dataset.appearanceReady==='true','Appearance did not initialize');
@@ -210,6 +306,11 @@ async function browserChecks(source, legacy) {
       click('#quick-add-btn');noOverflow('#task-modal .modal-card');const rect=doc.querySelector('#task-modal .modal-card').getBoundingClientRect();assert(rect.left>=-1&&rect.right<=width+1&&rect.top>=-1&&rect.bottom<=height+1,'Task dialog clipped');value('#task-repeat-input','weekly');click('#add-checklist-btn');noOverflow('#task-modal .modal-card');const saveRect=doc.querySelector('#save-task-btn').getBoundingClientRect();assert(saveRect.top>=0&&saveRect.bottom<=height,'Save button not visible');click('#cancel-task-btn');
       click(`[data-project-id="${project.id}"]`);['#kanban-view','.kanban-grid-layout','#kanban-view .planner-task-card'].forEach(noOverflow);
       todo('today');['#todolist-view','.myday-container','#myday-task-list .planner-task-card','.todo-toolbar'].forEach(noOverflow);
+      click('#open-hust-btn');noOverflow('#hust-dialog');const hustRect=doc.querySelector('#hust-dialog').getBoundingClientRect();assert(hustRect.left>=-1&&hustRect.right<=width+1&&hustRect.top>=-1&&hustRect.bottom<=height+1,'HUST dialog clipped');click('#close-hust-btn');
+      click('#hust-calendar-nav-link');['body','.main-content','#hust-calendar-view','#hust-calendar-view .topbar','#hust-calendar-grid','#hust-calendar-view .calendar-card'].forEach(noOverflow);
+      const schoolHeader=[...doc.querySelector('#hust-calendar-view .weekdays-bar').children].map(el=>el.getBoundingClientRect());
+      [...doc.querySelectorAll('#hust-calendar-grid .day-cell')].slice(0,7).forEach((el,i)=>{const r=el.getBoundingClientRect();assert(r.left>=-1&&r.right<=width+1,'HUST calendar column clipped');assert(Math.abs(r.left-schoolHeader[i].left)<2,'HUST calendar header misaligned');});
+      click('#hust-add-lesson-btn');noOverflow('#task-modal .modal-card');assert(doc.querySelector('#task-calendar-input').value==='hust','School add button lost calendar context');click('#cancel-task-btn');calendar();
       await openAppearance();noOverflow('#appearance-dialog');const appearanceRect=doc.querySelector('#appearance-dialog').getBoundingClientRect();assert(appearanceRect.left>=-1&&appearanceRect.right<=width+1&&appearanceRect.top>=-1&&appearanceRect.bottom<=height+1,'Background dialog clipped');click('#cancel-appearance-btn');
       results.push(`Layout ${width}x${height}`);
     }
@@ -233,11 +334,17 @@ else{
   if(report.failures.length) process.exitCode=1;
   if(!report.failures.length&&process.argv.includes('--screenshots')){
     const jobs=[];
-    for(const [width,height,view] of [[1280,800,'calendar'],[900,600,'today'],[640,480,'calendar'],[390,844,'today'],[1280,800,'form'],[1280,800,'project'],[1280,800,'appearance']]){
+    for(const [width,height,view] of [[1280,800,'calendar'],[900,600,'today'],[640,480,'calendar'],[390,844,'today'],[1280,800,'form'],[1280,800,'project'],[1280,800,'appearance'],[1280,800,'hust'],[390,844,'hust'],[1280,800,'hust-calendar'],[640,480,'hust-calendar'],[390,844,'hust-calendar']]){
       const file=path.join(folder,`${view}-${width}x${height}.html`),screenshot=file.replace('.html','.png');
-      const activate=view==='today'?`document.getElementById('todolist-nav-link').click();`:view==='form'?`document.getElementById('quick-add-btn').click();document.getElementById('task-text-input').value='Lập kế hoạch tuần';document.getElementById('task-repeat-input').value='weekly';document.getElementById('task-repeat-input').dispatchEvent(new Event('change'));`:view==='project'?`document.querySelectorAll('.project-item')[1].click();`:view==='appearance'?`document.getElementById('open-appearance-btn').click();`:'';
+      const activate=view==='today'?`document.getElementById('todolist-nav-link').click();`:view==='form'?`document.getElementById('quick-add-btn').click();document.getElementById('task-text-input').value='Lập kế hoạch tuần';document.getElementById('task-repeat-input').value='weekly';document.getElementById('task-repeat-input').dispatchEvent(new Event('change'));`:view==='project'?`document.querySelectorAll('.project-item')[1].click();`:view==='appearance'?`document.getElementById('open-appearance-btn').click();`:view==='hust'?`document.getElementById('open-hust-btn').click();`:view==='hust-calendar'?`document.getElementById('hust-calendar-nav-link').click();`:'';
+      const previewStorage={...report.storage};
+      if(view==='hust-calendar'){
+        const schoolData=JSON.parse(previewStorage.planner_data_v2);
+        [['Đại số','2026-11-09','15:05','17:30','D3-301'],['Công nghệ phần mềm','2026-11-10','06:45','10:05','D9-201'],['Khoa học dữ liệu','2026-11-11','15:05','17:30','TC-301'],['Học máy','2026-11-12','06:45','10:05','D9-101'],['Học bù tự thêm','2026-11-11','18:00','20:30','Online'],['Thuật toán ứng dụng','2026-11-13','12:30','14:00','D5-101']].forEach(([title,task_date,time,end_time,location],index)=>schoolData.tasks.push({id:'school-preview-'+index,title,task_date,time,end_time,location,tag:'Study',calendar_id:'hust',...(index===4?{}:{source:{provider:'hust',term:'20261',class_id:'12345'+index}})}));
+        previewStorage.planner_data_v2=JSON.stringify(schoolData);
+      }
       const seedPhoto=`const wait=async(condition)=>{for(let i=0;i<200;i++){if(condition())return;await new Promise(r=>setTimeout(r,20));}throw new Error('Preview timed out');};await wait(()=>document.body.dataset.appearanceReady==='true');document.getElementById('open-appearance-btn').click();await wait(()=>document.getElementById('appearance-dialog').open);const bytes=Uint8Array.from(atob(${JSON.stringify(report.photoFixture.split(',')[1])}),c=>c.charCodeAt(0));const transfer=new frame.contentWindow.DataTransfer();transfer.items.add(new frame.contentWindow.File([bytes],'Nền thử nghiệm.png',{type:'image/png'}));document.getElementById('background-file-input').files=transfer.files;document.getElementById('background-file-input').dispatchEvent(new Event('change'));await wait(()=>!document.getElementById('choose-background-btn').disabled&&document.body.classList.contains('has-background'));document.getElementById('save-background-btn').click();await wait(()=>!document.getElementById('appearance-dialog').open);`;
-      const previewScript=`window.__storage=${JSON.stringify(report.storage)};window.__errors=[];const frame=document.createElement('iframe');frame.style.cssText='border:0;display:block;width:${width}px;height:${height}px';let started=false;frame.onload=async()=>{if(started||!frame.contentDocument.getElementById('open-appearance-btn'))return;started=true;const document=frame.contentDocument;const Event=frame.contentWindow.Event;${seedPhoto}${activate}window.__previewReady=true;};frame.srcdoc=${JSON.stringify(html)};document.body.append(frame);`;
+      const previewScript=`window.__storage=${JSON.stringify(previewStorage)};window.__errors=[];const frame=document.createElement('iframe');frame.style.cssText='border:0;display:block;width:${width}px;height:${height}px';let started=false;frame.onload=async()=>{if(started||!frame.contentDocument.getElementById('open-appearance-btn'))return;started=true;const document=frame.contentDocument;const Event=frame.contentWindow.Event;${seedPhoto}document.getElementById('dismiss-reminder').click();${activate}window.__previewReady=true;};frame.srcdoc=${JSON.stringify(html)};document.body.append(frame);`;
       const standalone='<!doctype html><meta charset="utf-8"><body style="margin:0;overflow:hidden"><script>'+previewScript.replaceAll('</script>','<\\/script>')+'</script></body>';
       fs.writeFileSync(file,standalone);
       jobs.push({file,screenshot,width,height});

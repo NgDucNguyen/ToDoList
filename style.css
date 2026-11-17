@@ -840,6 +840,7 @@ select:focus {
 }
 
 #calendar-view,
+#hust-calendar-view,
 #kanban-view {
   display: flex;
   flex-direction: column;
@@ -989,7 +990,7 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 0 !important;
+  min-height: 120px;
   margin-top: 0;
   overflow-y: auto;
   padding-right: 4px;
@@ -1985,7 +1986,7 @@ input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 button:active { transform: translateY(1px); }
 button:focus-visible, a:focus-visible { outline-color: #8993de; }
 .modal-backdrop:not(.hidden) .modal-card { animation: modal-reveal 180ms ease-out both; }
-#calendar-view:not(.hidden), #kanban-view:not(.hidden), #todolist-view:not(.hidden) { animation: view-reveal 160ms ease-out both; }
+#calendar-view:not(.hidden), #hust-calendar-view:not(.hidden), #kanban-view:not(.hidden), #todolist-view:not(.hidden) { animation: view-reveal 160ms ease-out both; }
 @keyframes modal-reveal { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes view-reveal { from { opacity: 0.5; } to { opacity: 1; } }
 @media (max-width: 700px) {
@@ -2053,7 +2054,11 @@ body.has-background .planner-task-card.completed { background: rgb(248 250 255 /
 .kanban-drag-handle { align-self: flex-start; color: var(--text-muted); cursor: grab; font-size: 0.72rem; user-select: none; }
 .kanban-drag-handle:active { cursor: grabbing; }
 .planner-task-card.dragging { opacity: 0.5; }
-#kanban-view .col-body.drag-over { background: rgb(89 101 204 / 12%); outline: 2px dashed var(--accent); outline-offset: -2px; }
+#kanban-view .planner-task-card { cursor: grab; }
+#kanban-view .planner-task-card:active { cursor: grabbing; }
+#kanban-view .kanban-col.drag-over { background: rgb(89 101 204 / 12%); outline: 2px dashed var(--accent); outline-offset: -2px; }
+#kanban-view .col-body:empty::before { content: "Thả công việc vào đây"; display: grid; place-items: center; min-height: 110px; padding: 12px; margin-top: 4px; border: 1px dashed #bbc4dc; border-radius: 9px; color: #69758c; font-size: 0.76rem; text-align: center; }
+.planner-task-card .task-complete-checkbox { width: 18px; height: 18px; margin: 0; flex-shrink: 0; cursor: pointer; }
 .advanced-filters { margin-top: 18px; color: var(--text-muted); font-size: 0.78rem; }
 .advanced-filters summary { cursor: pointer; font-weight: 600; padding: 6px 2px; }
 .advanced-filters label { display: block; margin: 10px 0 4px; font-size: 0.73rem; }
@@ -2085,9 +2090,36 @@ body.has-background .planner-task-card.completed { background: rgb(248 250 255 /
 body.has-background .view-progress { background: rgb(249 250 255 / 82%); border-color: rgb(255 255 255 / 65%); }
 
 .sidebar-tools-toggle { display: none; }
+.appearance-actions { display: flex; flex-direction: column; gap: 8px; }
+.hust-dialog { width: min(780px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); margin: auto; overflow-y: auto; color: var(--text-primary); }
+.calendar-kicker { margin: 0 0 5px; color: #6670b1; font-size: 0.72rem; font-weight: 600; }
+.calendar-page-hint { margin: -7px 0 14px; flex-shrink: 0; }
+.hust-calendar-actions .search-box input { padding-left: 12px; }
+@media (max-width: 600px) {
+  .nav-manu .nav-link { flex: 1; justify-content: center; padding: 9px 6px; gap: 6px; white-space: nowrap; font-size: 0.78rem; }
+  .hust-calendar-actions { width: 100%; gap: 8px; }
+  .hust-calendar-actions .search-box { flex: 1 1 100%; }
+  .hust-calendar-actions > .btn-primary, .hust-calendar-actions > .btn-outline { flex: 1 1 0; min-width: 0; }
+}
+.hust-dialog::backdrop { background: rgb(29 39 65 / 30%); backdrop-filter: blur(6px); }
+.hust-steps { padding-left: 20px; margin: 16px 0; font-size: 0.82rem; line-height: 1.8; color: var(--text-muted); }
+.hust-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.hust-status { padding: 12px; margin: 14px 0; border-radius: 9px; background: var(--accent-soft); color: #4854a5; font-size: 0.82rem; line-height: 1.6; overflow-wrap: anywhere; }
+.hust-status.error { background: #fff1f2; color: #a24050; }
+.hust-summary { font-size: 0.85rem; line-height: 1.7; font-weight: 600; }
+.hust-preview-table { overflow-x: auto; margin-top: 12px; max-height: 270px; border: 1px solid var(--border-subtle); border-radius: 10px; }
+.hust-preview-table table { width: 100%; min-width: 510px; border-collapse: collapse; font-size: 0.76rem; }
+.hust-preview-table th { position: sticky; top: 0; background: #f4f6fd; text-align: left; }
+.hust-preview-table td, .hust-preview-table th { padding: 9px 10px; border-bottom: 1px solid var(--border-subtle); }
+.hust-preview-table td { overflow-wrap: anywhere; }
+.hust-preview-table td:nth-child(-n+2) { white-space: nowrap; }
+.hust-auto-label { margin-top: 18px; line-height: 1.5; }
+.hust-footer { position: sticky; bottom: -22px; background: #fff; padding: 14px 0 8px; border-top: 1px solid var(--border-subtle); }
+#hust-disconnect-btn { margin-right: auto; }
+.task-badges .hust-source-badge { background: #edf1ff; color: #485aa0; }
 @media (max-width: 600px) {
   .sidebar { max-height: 44dvh; padding-bottom: 10px; }
-  .sidebar .brand-lockup { margin-bottom: 12px; padding-right: 42px; }
+  .sidebar .brand-lockup { margin-bottom: 12px; padding-right: 80px; }
   .sidebar-tools-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px; padding: 8px 11px; border: 1px solid #dfe4f2; border-radius: 9px; background: rgb(248 249 255 / 82%); color: #596780; font-size: 0.76rem; font-weight: 600; cursor: pointer; }
   .sidebar-tools-toggle:hover, .sidebar-tools-toggle[aria-expanded="true"] { border-color: #bbc4ed; color: var(--accent); background: var(--accent-soft); }
   .sidebar-tools-chevron { display: inline-block; font-size: 1.1rem; line-height: 0.75; transition: transform 160ms ease; }
@@ -2095,6 +2127,8 @@ body.has-background .view-progress { background: rgb(249 250 255 / 82%); border-
   .sidebar:not(.mobile-tools-open) .sidebar-tools { display: none; }
   .sidebar-tools { padding: 5px 2px 10px; }
   .sidebar-tools .projects-section-header { margin-top: 8px; }
-  .sidebar .appearance-actions { margin: 0; }
+  .sidebar .appearance-actions { margin: 0; flex-direction: row; }
+  .hust-dialog { padding: 16px; }
+  .hust-footer { bottom: -16px; }
   .view-progress { padding: 11px 12px; }
 }

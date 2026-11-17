@@ -1,7 +1,7 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const { dateString, parseDate, addDays, id } = PlannerStore;
+  const { dateString, parseDate, addDays, taskCalendar, id } = PlannerStore;
   const today = () => dateString(new Date());
   const escapeHTML = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const priorityNames = { low: "Thấp", normal: "Bình thường", high: "Cao", urgent: "Khẩn cấp" };
@@ -10,16 +10,19 @@
   const viewNames = { today: "Hôm nay", upcoming: "Sắp tới", overdue: "Quá hạn", important: "Quan trọng", unscheduled: "Chưa lên lịch" };
   let store;
   let viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  let hustViewDate = new Date(viewDate);
   let activeView = "calendar";
   let todoView = "today";
   let activeProjectId = "";
   let currentTagFilter = "ALL";
   let searchQuery = "";
+  let hustSearchQuery = "";
   let priorityFilter = "ALL";
   let statusFilter = "ALL";
   let filterFrom = "";
   let filterTo = "";
   let selectedDate = "";
+  let selectedCalendar = "personal";
   let editingTask = null;
   let editingProjectId = "";
   let checklistDraft = [];
@@ -79,7 +82,7 @@
     const weekdays = [...$("repeat-weekdays").querySelectorAll("input:checked")].map((input) => Number(input.value));
     if (frequency === "weekly" && !weekdays.length) throw new Error("Mẫu lặp hằng tuần cần ít nhất một thứ.");
     return {
-      title: $("task-text-input").value.trim(), time: $("task-time-input").value,
+      title: $("task-text-input").value.trim(), time: $("task-time-input").value, calendar_id: $("task-calendar-input").value,
       remind_before: $("task-reminder-input").value, tag: $("task-tag-input").value,
       project_id: $("task-project-input").value, status: $("task-status-input").value,
       priority: $("task-priority-input").value, is_important: $("task-important-input").checked,
@@ -92,6 +95,7 @@
   function applyTemplate(values) {
     $("task-text-input").value = String(values.title || "");
     $("task-time-input").value = String(values.time || "");
+    if (!$("task-calendar-input").disabled && ["personal", "hust"].includes(values.calendar_id)) $("task-calendar-input").value = values.calendar_id;
     $("task-reminder-input").value = String(values.remind_before ?? "");
     $("task-tag-input").value = values.tag || "Daily";
     if ([...$("task-project-input").options].some((option) => option.value === values.project_id)) $("task-project-input").value = values.project_id;
@@ -106,19 +110,19 @@
     $("task-repeat-until").value = "";
     const weekdays = values.recurrence?.weekdays || [parseDate($("task-date-picker").value)?.getDay() ?? new Date().getDay()];
     $("repeat-weekdays").querySelectorAll("input").forEach((input) => { input.checked = weekdays.includes(Number(input.value)); });
-    updateRepeatFields();
+    updateRepeatFields(); updateTaskCalendarFields();
   }
 
   function normalizeText(value) { return String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase(); }
-  function filterTasks(rows) {
-    const words = normalizeText(searchQuery).trim().split(/\s+/).filter(Boolean);
+  function filterTasks(rows, calendar = "personal") {
+    const words = normalizeText(calendar === "hust" ? hustSearchQuery : searchQuery).trim().split(/\s+/).filter(Boolean);
     return rows.filter((task) =>
-      (currentTagFilter === "ALL" || task.tag === currentTagFilter) &&
+      (calendar === "hust" || ((currentTagFilter === "ALL" || task.tag === currentTagFilter) &&
       (priorityFilter === "ALL" || task.priority === priorityFilter) &&
       (statusFilter === "ALL" || task.status === statusFilter) &&
       (!filterFrom || Boolean(task.task_date && task.task_date >= filterFrom)) &&
-      (!filterTo || Boolean(task.task_date && task.task_date <= filterTo)) &&
-      words.every((word) => normalizeText(`${task.title} ${task.description}`).includes(word))
+      (!filterTo || Boolean(task.task_date && task.task_date <= filterTo)))) &&
+      words.every((word) => normalizeText(`${task.title} ${task.description} ${task.source?.class_id || ""} ${task.location || ""}`).includes(word))
     );
   }
   function sortTasks(rows) {
@@ -146,14 +150,17 @@
     showModal("confirm-modal", "confirm-cancel-btn");
   }
 
-  function renderCalendar() {
-    $("current-month-year").textContent = `Tháng ${viewDate.getMonth() + 1} - ${viewDate.getFullYear()}`;
-    const start = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  function renderCalendar(calendar = "personal") {
+    const month = calendar === "hust" ? hustViewDate : viewDate;
+    const prefix = calendar === "hust" ? "hust-" : "";
+    $(prefix + "current-month-year").textContent = `Tháng ${month.getMonth() + 1} - ${month.getFullYear()}`;
+    const start = new Date(month.getFullYear(), month.getMonth(), 1);
     start.setDate(start.getDate() - (start.getDay() + 6) % 7);
-    const last = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
+    const last = new Date(month.getFullYear(), month.getMonth() + 1, 0);
     last.setDate(last.getDate() + (7 - last.getDay()) % 7);
     const byDate = new Map();
-    filterTasks(store.occurrences(dateString(start), dateString(last))).forEach((task) => {
+    const rows = filterTasks(store.occurrences(dateString(start), dateString(last)).filter(task => taskCalendar(task) === calendar), calendar);
+    rows.forEach((task) => {
       if (!byDate.has(task.task_date)) byDate.set(task.task_date, []);
       byDate.get(task.task_date).push(task);
     });
@@ -161,20 +168,24 @@
     for (let date = dateString(start); date <= dateString(last); date = addDays(date, 1)) {
       const parsed = parseDate(date);
       const cell = document.createElement("div");
-      cell.className = `day-cell${parsed.getMonth() !== viewDate.getMonth() ? " other-month" : ""}${date === today() ? " today" : ""}`;
+      cell.className = `day-cell${parsed.getMonth() !== month.getMonth() ? " other-month" : ""}${date === today() ? " today" : ""}`;
       cell.dataset.date = date;
       cell.innerHTML = `<div class="day-header"><div class="day-number-wrapper"><span class="day-num">${parsed.getDate()}</span><span class="lunar-num">${getLunarDate(parsed.getDate(), parsed.getMonth() + 1, parsed.getFullYear())}</span></div><button class="add-task-btn" aria-label="Thêm công việc ngày ${date}">+</button></div><div class="task-list"></div>`;
-      cell.querySelector(".add-task-btn").addEventListener("click", (event) => { event.stopPropagation(); openTaskModal({ date }); });
+      cell.querySelector(".add-task-btn").addEventListener("click", (event) => { event.stopPropagation(); openTaskModal({ date, calendar }); });
       const tasks = sortTasks(byDate.get(date) || []);
       tasks.slice(0, 2).forEach((task) => cell.querySelector(".task-list").append(createTaskCard(task, "calendar")));
       if (tasks.length > 2) {
         const more = document.createElement("button"); more.className = "more-tasks-btn";
-        more.textContent = `+${tasks.length - 2} việc khác`; cell.querySelector(".task-list").append(more);
+        more.textContent = `+${tasks.length - 2} ${calendar === "hust" ? "buổi khác" : "việc khác"}`; cell.querySelector(".task-list").append(more);
       }
-      cell.addEventListener("click", () => { selectedDate = date; renderDayDetails(); showModal("day-details-modal", "close-day-details-btn"); });
+      cell.addEventListener("click", () => { selectedDate = date; selectedCalendar = calendar; renderDayDetails(); showModal("day-details-modal", "close-day-details-btn"); });
       fragment.append(cell);
     }
-    $("calendar-grid").replaceChildren(fragment);
+    $(prefix + "calendar-grid").replaceChildren(fragment);
+    if (calendar === "hust") {
+      const schoolTasks = store.state.tasks.filter(task => taskCalendar(task) === "hust" && !task.source?.cancelled);
+      $("hust-calendar-summary").textContent = schoolTasks.length ? `${rows.filter(task => task.task_date.slice(0, 7) === dateString(month).slice(0, 7)).length} buổi trong tháng · Lịch học riêng, gồm lịch đồng bộ và buổi bạn tự thêm.` : 'Chưa có lịch học. Bấm “Đồng bộ HUST” hoặc “Thêm buổi học” để bắt đầu.';
+    }
   }
 
   function createTaskCard(task, variant) {
@@ -185,14 +196,22 @@
     card.dataset.occurrenceDate = task.occurrence_date || "";
     const project = projectName(task);
     const safeTag = /^[a-zA-Z0-9_-]+$/.test(task.tag) ? task.tag : "Other";
+    const timeLabel = task.time + (task.end_time ? `–${task.end_time}` : "");
     const checklistCount = task.checklist.filter((item) => item.is_completed).length;
-    card.innerHTML = `<div class="task-meta"><span class="task-time">${compact ? escapeHTML(task.time) : escapeHTML(friendlyDate(task.task_date) + (task.time ? ` · ${task.time}` : ""))}</span><span class="task-tag tag-${safeTag}">${escapeHTML(task.tag)}</span></div>
+    card.innerHTML = `<div class="task-meta"><span class="task-time">${compact ? escapeHTML(timeLabel) : escapeHTML(friendlyDate(task.task_date) + (task.time ? ` · ${timeLabel}` : ""))}</span><span class="task-tag tag-${safeTag}">${escapeHTML(task.tag)}</span></div>
       <div class="task-body"><input class="task-complete-checkbox" type="checkbox" aria-label="Hoàn thành ${escapeHTML(task.title)}" ${task.is_completed ? "checked" : ""}><button class="task-open-btn" title="${escapeHTML(task.title)}">${escapeHTML(task.title)}</button><button class="task-star-btn${task.is_important ? " active" : ""}" aria-label="Đánh dấu quan trọng" aria-pressed="${task.is_important}">${task.is_important ? "★" : "☆"}</button></div>
       <div class="task-badges">${task.priority !== "normal" ? `<span class="priority-badge priority-${task.priority}">${priorityNames[task.priority]}</span>` : ""}${task.recurrence ? `<span class="repeat-badge" title="${escapeHTML(repeatLabel(task))}">↻${compact ? "" : ` ${escapeHTML(repeatLabel(task))}`}</span>` : ""}${task.checklist.length ? `<span class="checklist-badge">☑ ${checklistCount}/${task.checklist.length}</span>` : ""}${!compact && project ? `<span class="project-badge">📁 ${escapeHTML(project)}</span>` : ""}${!compact ? `<span class="status-badge">${statusNames[task.status]}</span>` : ""}</div>`;
+    if (task.source?.provider === "hust") {
+      const badge = document.createElement("span"); badge.className = "hust-source-badge";
+      badge.textContent = `HUST${task.location ? ` · ${task.location}` : ""}`;
+      badge.title = `Lớp ${task.source.class_id || ""} · ${task.source.course_id || ""}`;
+      card.querySelector(".task-badges").append(badge);
+    }
     card.querySelector(".task-open-btn").addEventListener("click", (event) => { event.stopPropagation(); openTaskModal({ task }); });
     card.querySelector(".task-complete-checkbox").addEventListener("click", (event) => event.stopPropagation());
-    card.querySelector(".task-complete-checkbox").addEventListener("change", () => {
-      safely(() => store.setStatus(task, task.is_completed ? "todo" : "done")); renderAll();
+    card.querySelector(".task-complete-checkbox").addEventListener("change", (event) => {
+      const status = event.currentTarget.checked ? "done" : "todo";
+      safely(() => store.setStatus(task, status)); renderAll();
     });
     card.querySelector(".task-star-btn").addEventListener("click", (event) => {
       event.stopPropagation(); safely(() => { store.setImportant(task, !task.is_important); renderAll(); });
@@ -222,16 +241,18 @@
       handle.textContent = "⋮⋮ Kéo sang cột khác";
       handle.title = "Kéo để đổi trạng thái công việc";
       handle.draggable = true;
-      handle.addEventListener("dragstart", (event) => {
+      card.draggable = true;
+      card.addEventListener("dragstart", (event) => {
+        if (event.target.closest("button, input, select, textarea, a")) { event.preventDefault(); return; }
         draggedKanbanTask = task;
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", task.id);
         card.classList.add("dragging");
       });
-      handle.addEventListener("dragend", () => {
+      card.addEventListener("dragend", () => {
         draggedKanbanTask = null;
         card.classList.remove("dragging");
-        document.querySelectorAll("#kanban-view .col-body").forEach((column) => column.classList.remove("drag-over"));
+        document.querySelectorAll("#kanban-view .kanban-col").forEach((column) => column.classList.remove("drag-over"));
       });
       card.append(handle, control);
     }
@@ -240,14 +261,16 @@
 
   function renderDayDetails() {
     if (!selectedDate) return;
-    const tasks = sortTasks(filterTasks(store.occurrences(selectedDate, selectedDate)));
+    const tasks = sortTasks(filterTasks(store.occurrences(selectedDate, selectedDate).filter(task => taskCalendar(task) === selectedCalendar), selectedCalendar));
+    $("day-details-title").textContent = selectedCalendar === "hust" ? "Buổi học trong ngày" : "Danh sách công việc";
+    $("day-details-add-btn").textContent = selectedCalendar === "hust" ? "+ Thêm buổi học" : "+ Thêm công việc";
     $("day-details-subtitle").textContent = `Ngày ${friendlyDate(selectedDate)}`;
     const count = tasks.filter((task) => task.is_completed).length;
     const percent = tasks.length ? Math.round(count / tasks.length * 100) : 0;
     $("battery-fill").style.width = `${percent}%`; $("battery-percent").textContent = `${percent}%`;
     $("progress-count").textContent = `${count}/${tasks.length}`;
     const list = $("day-details-task-list"); list.replaceChildren();
-    if (!tasks.length) list.innerHTML = '<div class="empty-day-state">Không có công việc phù hợp trong ngày này.</div>';
+    if (!tasks.length) list.innerHTML = `<div class="empty-day-state">${selectedCalendar === "hust" ? "Không có buổi học phù hợp trong ngày này." : "Không có công việc phù hợp trong ngày này."}</div>`;
     tasks.forEach((task) => list.append(createTaskCard(task, "day")));
   }
   function renderProjects() {
@@ -271,7 +294,7 @@
   function renderKanban() {
     const project = store.state.projects.find((item) => item.id === activeProjectId); if (!project) return;
     $("kanban-project-title").textContent = project.name;
-    const rows = sortTasks(filterTasks(store.projectTasks(project.id)));
+    const rows = sortTasks(filterTasks(store.projectTasks(project.id).filter(task => taskCalendar(task) === "personal")));
     $("project-summary").textContent = `${rows.filter((task) => task.is_completed).length}/${rows.length} công việc hoàn thành`;
     for (const status of Object.keys(statusNames)) {
       const tasks = rows.filter((task) => task.status === status);
@@ -282,7 +305,7 @@
   function renderTodo() {
     $("todo-view-title").textContent = viewNames[todoView];
     $("myday-date").textContent = todoView === "upcoming" ? `Từ ${friendlyDate(addDays(today(), 1))} đến ${friendlyDate(addDays(today(), 7))}` : todoView === "important" ? "Việc được gắn sao, bao gồm các lần lặp trong 7 ngày tới" : new Date().toLocaleDateString("vi-VN", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-    const allTasks = filterTasks(store.todo(todoView));
+    const allTasks = filterTasks(store.todo(todoView).filter(task => taskCalendar(task) === "personal"));
     const completed = allTasks.filter((task) => task.is_completed).length;
     const percent = allTasks.length ? Math.round(completed / allTasks.length * 100) : 0;
     $("todo-progress-label").textContent = `Tiến độ ${viewNames[todoView].toLowerCase()}`;
@@ -292,7 +315,7 @@
     $("todo-progress-bar").setAttribute("aria-valuetext", `${completed} trên ${allTasks.length} công việc hoàn thành`);
     document.querySelectorAll(".todo-tab").forEach((tab) => {
       tab.classList.toggle("active", tab.dataset.view === todoView); tab.setAttribute("aria-selected", String(tab.dataset.view === todoView));
-      tab.querySelector("span").textContent = filterTasks(store.todo(tab.dataset.view)).filter((task) => !task.is_completed).length;
+      tab.querySelector("span").textContent = filterTasks(store.todo(tab.dataset.view).filter(task => taskCalendar(task) === "personal")).filter((task) => !task.is_completed).length;
     });
     let tasks = allTasks;
     if (!$("show-completed").checked) tasks = tasks.filter((task) => !task.is_completed);
@@ -301,17 +324,26 @@
     sortTasks(tasks).forEach((task) => list.append(createTaskCard(task, "todo")));
   }
   function renderAll() {
-    renderProjects(); renderCalendar(); renderKanban(); renderTodo();
+    // Replacing every card temporarily empties the columns and resets their scroll.
+    const scrollPositions = [...document.querySelectorAll("#kanban-view, #kanban-view .col-body, .calendar-card, .myday-container, .sidebar, #day-details-task-list")]
+      .map((element) => ({ element, top: element.scrollTop, left: element.scrollLeft }));
+    renderProjects(); renderCalendar(); renderCalendar("hust"); renderKanban(); renderTodo();
     if (!$("day-details-modal").classList.contains("hidden")) renderDayDetails();
+    scrollPositions.forEach(({ element, top, left }) => { element.scrollTop = top; element.scrollLeft = left; });
   }
   function showView(view) {
     activeView = view;
     if (window.matchMedia("(max-width: 600px)").matches) setSidebarToolsOpen(false);
     $("calendar-view").classList.toggle("hidden", view !== "calendar");
+    $("hust-calendar-view").classList.toggle("hidden", view !== "hust");
     $("kanban-view").classList.toggle("hidden", view !== "project");
     $("todolist-view").classList.toggle("hidden", view !== "todo");
-    document.querySelector(".nav-link:not(#todolist-nav-link)").classList.toggle("active", view === "calendar");
-    $("todolist-nav-link").classList.toggle("active", view === "todo"); renderAll();
+    for (const [elementId, target] of [["calendar-nav-link", "calendar"], ["hust-calendar-nav-link", "hust"], ["todolist-nav-link", "todo"]]) {
+      $(elementId).classList.toggle("active", view === target);
+      if (view === target) $(elementId).setAttribute("aria-current", "page"); else $(elementId).removeAttribute("aria-current");
+    }
+    document.querySelectorAll(".tag-filter-btn, #advanced-filters input, #advanced-filters select, #advanced-filters button").forEach(element => { element.disabled = view === "hust"; });
+    renderAll();
   }
   function setSidebarToolsOpen(open) {
     document.querySelector(".sidebar").classList.toggle("mobile-tools-open", open);
@@ -349,17 +381,27 @@
       $("delete-task-btn").textContent = series ? "Xóa cả chuỗi" : "Xóa lần này";
     }
   }
-  function openTaskModal({ task = null, date, projectId = "" } = {}) {
+  function updateTaskCalendarFields() {
+    const school = $("task-calendar-input").value === "hust";
+    $("task-project-input").disabled = school;
+    if (school) $("task-project-input").value = "";
+  }
+  function openTaskModal({ task = null, date, projectId = "", calendar = activeView === "hust" ? "hust" : "personal" } = {}) {
     editingTask = task; $("task-form").reset(); $("task-form-error").classList.add("hidden"); renderProjects();
     $("task-template-name").value = ""; $("task-template-select").value = ""; renderTemplates();
-    $("modal-title").textContent = task ? "Chi tiết công việc" : "Thêm công việc";
+    calendar = task ? taskCalendar(task) : calendar;
+    $("task-calendar-input").value = calendar;
+    $("task-calendar-input").disabled = task?.source?.provider === "hust";
+    $("modal-title").textContent = task ? (calendar === "hust" ? "Chi tiết buổi học" : "Chi tiết công việc") : (calendar === "hust" ? "Thêm buổi học" : "Thêm công việc");
+    $("task-source-info").classList.toggle("hidden", task?.source?.provider !== "hust");
+    $("task-source-info").textContent = task?.source?.provider === "hust" ? `QLĐT HUST · Kỳ ${task.source.term} · Lớp ${task.source.class_id} · ${task.time}–${task.end_time || ""} · ${task.location || "Chưa rõ phòng"}. Các nội dung bạn chỉnh riêng sẽ được giữ khi đồng bộ.` : "";
     $("task-text-input").value = task?.title || "";
     $("task-date-picker").value = task ? task.task_date : (date ?? today());
     $("task-time-input").value = task?.time || "";
     $("task-reminder-input").value = task?.remind_before ?? "";
-    const tag = task?.tag || (projectId ? "Project" : "Daily");
+    const tag = task?.tag || (calendar === "hust" ? "Study" : projectId ? "Project" : "Daily");
     if (![...$("task-tag-input").options].some((option) => option.value === tag)) $("task-tag-input").add(new Option(tag, tag));
-    $("task-tag-input").value = tag; $("task-project-input").value = task?.project_id || projectId;
+    $("task-tag-input").value = tag; $("task-project-input").value = task?.project_id || projectId; updateTaskCalendarFields();
     $("task-status-input").value = task?.status || "todo"; $("task-priority-input").value = task?.priority || "normal";
     $("task-important-input").checked = task?.is_important || false; $("task-description-input").value = task?.description || "";
     checklistDraft = (task?.checklist || []).map((item) => ({ ...item })); renderChecklistEditor();
@@ -381,6 +423,7 @@
       const weekdays = [...$("repeat-weekdays").querySelectorAll("input:checked")].map((input) => Number(input.value));
       if (frequency === "weekly" && !weekdays.length) throw new Error("Hãy chọn ít nhất một ngày trong tuần.");
       const patch = {
+        calendar_id: editingTask?.source?.provider === "hust" ? "hust" : $("task-calendar-input").value,
         title, task_date: start, time: $("task-time-input").value, remind_before: $("task-reminder-input").value, tag: $("task-tag-input").value,
         project_id: $("task-project-input").value, status: $("task-status-input").value,
         priority: $("task-priority-input").value, is_important: $("task-important-input").checked,
@@ -401,6 +444,7 @@
   }
 
   $("task-form").addEventListener("submit", saveTask);
+  $("task-calendar-input").addEventListener("change", updateTaskCalendarFields);
   $("task-repeat-input").addEventListener("change", updateRepeatFields);
   $("task-edit-scope").addEventListener("change", () => {
     const series = store.state.tasks.find((task) => task.id === editingTask?.id);
@@ -410,6 +454,7 @@
       $("task-description-input").value = values.description; $("task-project-input").value = values.project_id;
       $("task-priority-input").value = values.priority; $("task-important-input").checked = values.is_important;
       $("task-time-input").value = values.time; $("task-tag-input").value = values.tag;
+      $("task-calendar-input").value = taskCalendar(values); updateTaskCalendarFields();
       $("task-reminder-input").value = values.remind_before ?? "";
       checklistDraft = values.checklist.map((item) => ({ ...item })); renderChecklistEditor();
     } updateRepeatFields();
@@ -457,7 +502,8 @@
   });
   for (const button of ["close-modal-btn", "cancel-task-btn"]) $(button).addEventListener("click", () => closeModal("task-modal"));
   for (const button of ["close-day-details-btn", "day-details-close-btn"]) $(button).addEventListener("click", () => closeModal("day-details-modal"));
-  $("day-details-add-btn").addEventListener("click", () => { closeModal("day-details-modal"); openTaskModal({ date: selectedDate }); });
+  $("day-details-add-btn").addEventListener("click", () => { closeModal("day-details-modal"); openTaskModal({ date: selectedDate, calendar: selectedCalendar }); });
+  $("hust-add-lesson-btn").addEventListener("click", () => openTaskModal({ calendar: "hust" }));
   $("quick-add-btn").addEventListener("click", () => openTaskModal());
   $("todo-add-btn").addEventListener("click", () => openTaskModal({ date: todoView === "unscheduled" ? "" : todoView === "upcoming" ? addDays(today(), 1) : today() }));
   $("add-kanban-task-btn").addEventListener("click", () => openTaskModal({ projectId: activeProjectId, date: "" }));
@@ -474,13 +520,17 @@
   }));
   $("confirm-cancel-btn").addEventListener("click", () => { confirmAction = null; closeModal("confirm-modal"); });
   $("confirm-ok-btn").addEventListener("click", () => { if (!confirmAction) return; const action = confirmAction; confirmAction = null; closeModal("confirm-modal"); safely(action); });
-  document.querySelector(".nav-link:not(#todolist-nav-link)").addEventListener("click", (event) => { event.preventDefault(); showView("calendar"); });
+  $("calendar-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("calendar"); });
+  $("hust-calendar-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("hust"); });
   $("sidebar-tools-toggle").addEventListener("click", () => setSidebarToolsOpen($("sidebar-tools-toggle").getAttribute("aria-expanded") !== "true"));
   $("todolist-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("todo"); });
   document.querySelector(".brand-title").addEventListener("click", () => { viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1); showView("calendar"); });
   $("prev-month-btn").addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); });
   $("next-month-btn").addEventListener("click", () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); });
   $("search-input").addEventListener("input", (event) => { searchQuery = event.target.value; renderAll(); });
+  $("hust-search-input").addEventListener("input", (event) => { hustSearchQuery = event.target.value; renderCalendar("hust"); if (!$("day-details-modal").classList.contains("hidden") && selectedCalendar === "hust") renderDayDetails(); });
+  $("hust-prev-month-btn").addEventListener("click", () => { hustViewDate.setMonth(hustViewDate.getMonth() - 1); renderCalendar("hust"); });
+  $("hust-next-month-btn").addEventListener("click", () => { hustViewDate.setMonth(hustViewDate.getMonth() + 1); renderCalendar("hust"); });
   document.querySelectorAll(".tag-filter-btn").forEach((button) => button.addEventListener("click", () => {
     currentTagFilter = button.dataset.tag; document.querySelectorAll(".tag-filter-btn").forEach((item) => item.classList.toggle("active", item === button)); renderAll();
   }));
@@ -552,7 +602,7 @@
   $("dismiss-reminder").addEventListener("click", () => $("reminder-banner").classList.add("hidden"));
   setInterval(refreshAfterMidnight, 60000);
   setInterval(checkReminders, 30000);
-  document.querySelectorAll("#kanban-view .col-body").forEach((column) => {
+  document.querySelectorAll("#kanban-view .kanban-col").forEach((column) => {
     column.addEventListener("dragover", (event) => {
       if (!draggedKanbanTask) return;
       event.preventDefault();
@@ -573,5 +623,6 @@
     });
   });
   renderAll();
+  window.PlannerHustUI?.init({ getStore: () => store, renderAll, notice });
   checkReminders();
 })();

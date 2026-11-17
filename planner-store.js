@@ -12,6 +12,7 @@
   const STATUSES = ["todo", "doing", "done"];
   const PRIORITIES = ["low", "normal", "high", "urgent"];
   const clone = (value) => JSON.parse(JSON.stringify(value));
+  const taskCalendar = (task) => task.source?.provider === "hust" || task.calendar_id === "hust" ? "hust" : "personal";
   const id = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
   function dateString(date) {
@@ -170,6 +171,21 @@
         if (saved.version !== 2 || !Array.isArray(saved.tasks) || !Array.isArray(saved.projects)) throw new Error("Phiên bản dữ liệu chưa được hỗ trợ. Dữ liệu gốc được giữ nguyên.");
         state = { ...saved, tasks: saved.tasks.map(normalizeTask) };
         savedRaw = storage.getItem(DATA_KEY);
+        const schoolProjects = new Set(state.projects.filter((project) => project.source?.provider === "hust").map((project) => project.id));
+        if (schoolProjects.size) {
+          const draft = clone(state);
+          draft.projects = draft.projects.filter((project) => !schoolProjects.has(project.id));
+          for (const task of draft.tasks) {
+            if (schoolProjects.has(task.project_id)) { task.calendar_id = "hust"; task.project_id = ""; }
+            for (const occurrence of Object.values(task.occurrences)) {
+              if (schoolProjects.has(occurrence.project_id)) { occurrence.calendar_id = "hust"; occurrence.project_id = ""; }
+            }
+          }
+          if (storage.getItem("planner_backup_before_hust_calendar") === null) storage.setItem("planner_backup_before_hust_calendar", savedRaw);
+          const raw = JSON.stringify(draft);
+          storage.setItem(DATA_KEY, raw);
+          state = draft; savedRaw = raw;
+        }
         return;
       }
       const legacy = LEGACY_KEYS.map((key) => readJSON(key, []));
@@ -239,7 +255,7 @@
           next.status = "todo"; next.is_completed = false;
           // Fields deliberately edited for the whole series replace per-occurrence values.
           for (const override of Object.values(next.occurrences)) {
-            for (const key of ["title", "description", "priority", "is_important", "project_id", "tag", "time", "remind_before"]) if (key in patch) delete override[key];
+            for (const key of ["title", "description", "priority", "is_important", "project_id", "calendar_id", "tag", "time", "remind_before"]) if (key in patch) delete override[key];
             if ("checklist" in patch) {
               const old = new Map((override.checklist || []).map((item) => [item.id, item.is_completed]));
               override.checklist = next.checklist.map((item) => ({ ...item, is_completed: old.get(item.id) || false }));
@@ -273,12 +289,61 @@
       const checklist = task.checklist.map((item) => item.id === itemId ? { ...item, is_completed: Boolean(completed) } : item);
       updateTask(task.id, { checklist }, { date: task.occurrence_date });
     }
+    function planHustSync(snapshot) {
+      if (!snapshot || !/^[a-f0-9]{24}$/.test(snapshot.account || "") || !/^\d{5}$/.test(snapshot.term || "") || snapshot.complete !== true || !Array.isArray(snapshot.events) || !snapshot.events.length || snapshot.events.length > 3000) throw new Error("Lịch HUST chưa đầy đủ hoặc không hợp lệ. Chưa thay đổi dữ liệu.");
+      const keys = new Set(), clock = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+      const events = snapshot.events.map((event) => {
+        if (!event || typeof event.uid !== "string" || !event.uid || event.uid.length > 240 || keys.has(event.uid) || typeof event.title !== "string" || !event.title.trim() || event.title.length > 2000 || !parseDate(event.date) || !clock.test(event.time) || !clock.test(event.endTime) || event.endTime <= event.time) throw new Error("Có buổi học HUST thiếu ngày/giờ hoặc trùng mã. Chưa đồng bộ.");
+        keys.add(event.uid);
+        return { ...event, title: event.title.trim(), room: String(event.room || "").slice(0, 2000), classId: String(event.classId || "").slice(0, 160), courseId: String(event.courseId || "").slice(0, 160), classType: String(event.classType || "").slice(0, 80) };
+      });
+      const draft = clone(state), now = new Date().toISOString();
+      const sameSource = (source) => source?.provider === "hust" && source.account === snapshot.account && source.term === snapshot.term;
+      const existing = new Map(draft.tasks.filter((task) => sameSource(task.source)).map((task) => [task.source.uid, task]));
+      if (existing.size !== draft.tasks.filter((task) => sameSource(task.source)).length) throw new Error("Lịch HUST cũ có mã buổi trùng nhau. Chưa đồng bộ để bảo vệ dữ liệu.");
+      const summary = { added: 0, updated: 0, archived: 0, restored: 0, unchanged: 0, conflicts: [], total: events.length };
+      for (const event of events) {
+        const fields = { title: event.title, task_date: event.date, time: event.time, end_time: event.endTime, location: event.room };
+        let task = existing.get(event.uid);
+        const source = { provider: "hust", account: snapshot.account, term: snapshot.term, uid: event.uid, class_id: event.classId, course_id: event.courseId, class_type: event.classType, original_date: event.originalDate || event.date, changed: Boolean(event.changed), cancelled: false, last: fields };
+        if (!task) {
+          task = normalizeTask({ ...fields, id: id(), tag: "Study", calendar_id: "hust", project_id: "", source });
+          draft.tasks.push(task); summary.added++;
+        } else {
+          let changed = Boolean(task.source.cancelled);
+          if (task.source.cancelled) summary.restored++;
+          for (const [field, value] of Object.entries(fields)) {
+            if (task[field] === value) continue;
+            if (["title", "task_date", "time"].includes(field) && task.source.last && task[field] !== task.source.last[field]) {
+              if (value !== task.source.last[field]) summary.conflicts.push({ title: task.title, field, local: task[field], remote: value });
+              continue;
+            }
+            task[field] = value; changed = true;
+          }
+          if (JSON.stringify(task.source.last) !== JSON.stringify(fields) || task.source.class_type !== source.class_type) changed = true;
+          task.source = source;
+          if (changed) summary.updated++; else summary.unchanged++;
+        }
+      }
+      for (const [uid, task] of existing) if (!keys.has(uid) && !task.source.cancelled) { task.source.cancelled = true; summary.archived++; }
+      draft.hust_sync = { account: snapshot.account, term: snapshot.term, last_sync: now, summary: { added: summary.added, updated: summary.updated, archived: summary.archived } };
+      return { draft, summary };
+    }
+    function previewHustSync(snapshot) { return planHustSync(snapshot).summary; }
+    function applyHustSync(snapshot) {
+      const plan = planHustSync(snapshot);
+      if (storage.getItem(DATA_KEY) !== savedRaw) throw new Error("Dữ liệu vừa thay đổi ở cửa sổ khác. Hãy tải lại ứng dụng trước khi đồng bộ.");
+      if (storage.getItem("planner_backup_before_hust") === null) storage.setItem("planner_backup_before_hust", savedRaw);
+      commit((draft) => { draft.tasks = plan.draft.tasks; draft.projects = plan.draft.projects; draft.hust_sync = plan.draft.hust_sync; });
+      return plan.summary;
+    }
+    function activeTask(task) { return !(task.source?.provider === "hust" && task.source.cancelled); }
     function occurrences(from, until, projectId) {
-      return state.tasks.filter((task) => !projectId || task.project_id === projectId || Object.values(task.occurrences).some((item) => item.project_id === projectId))
+      return state.tasks.filter(activeTask).filter((task) => !projectId || task.project_id === projectId || Object.values(task.occurrences).some((item) => item.project_id === projectId))
         .flatMap((task) => occurrencesInRange(task, from, until)).filter((task) => !projectId || task.project_id === projectId);
     }
     function todo(mode, today = dateString(new Date())) {
-      if (mode === "unscheduled") return state.tasks.filter((task) => !task.task_date).map((task) => projectOccurrence(task));
+      if (mode === "unscheduled") return state.tasks.filter(activeTask).filter((task) => !task.task_date).map((task) => projectOccurrence(task));
       const earliest = state.tasks.reduce((date, task) => {
         const dates = [task.task_date, ...Object.values(task.occurrences).map((item) => item.task_date)].filter((value) => parseDate(value));
         return dates.reduce((min, value) => value < min ? value : min, date);
@@ -287,11 +352,11 @@
       const until = mode === "overdue" ? addDays(today, -1) : mode === "today" ? today : addDays(today, 7);
       let result = occurrences(from, until);
       if (mode === "overdue") result = result.filter((task) => !task.is_completed);
-      if (mode === "important") result = result.filter((task) => task.recurrence && task.is_important).concat(state.tasks.filter((task) => !task.recurrence && task.is_important).map((task) => projectOccurrence(task)));
+      if (mode === "important") result = result.filter((task) => task.recurrence && task.is_important).concat(state.tasks.filter(activeTask).filter((task) => !task.recurrence && task.is_important).map((task) => projectOccurrence(task)));
       return result;
     }
     function projectTasks(projectId, today = dateString(new Date())) {
-      return state.tasks.flatMap((task) => {
+      return state.tasks.filter(activeTask).flatMap((task) => {
         if (!task.recurrence) return task.project_id === projectId ? [projectOccurrence(task)] : [];
         if (task.project_id !== projectId && !Object.values(task.occurrences).some((entry) => entry.project_id === projectId)) return [];
         const end = task.recurrence.until || addDays(today > task.task_date ? today : task.task_date, 370 * task.recurrence.interval);
@@ -331,8 +396,8 @@
         }
       });
     }
-    return { get state() { return clone(state); }, migrated, addTask, updateTask, removeTask, setStatus, setImportant, setChecklistItem, occurrences, todo, projectTasks, saveProject, removeProject };
+    return { get state() { return clone(state); }, migrated, addTask, updateTask, removeTask, setStatus, setImportant, setChecklistItem, occurrences, todo, projectTasks, saveProject, removeProject, previewHustSync, applyHustSync };
   }
 
-  return { DATA_KEY, BACKUP_KEY, LEGACY_KEYS, createStore, dateString, parseDate, addDays, occursOn, occurrencesInRange, normalizeTask, id };
+  return { DATA_KEY, BACKUP_KEY, LEGACY_KEYS, createStore, dateString, parseDate, addDays, occursOn, occurrencesInRange, normalizeTask, taskCalendar, id };
 });

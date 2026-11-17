@@ -1,5 +1,9 @@
 const { app, BrowserWindow, ipcMain, Notification } = require("electron");
 const path = require("path");
+const { createHustConnector } = require("./hust-connector");
+let mainWindow = null;
+const hustConnector = createHustConnector(app, () => mainWindow);
+hustConnector.register(ipcMain);
 
 ipcMain.on("planner:reminder", (event, message) => {
   if (!BrowserWindow.fromWebContents(event.sender) || !Notification.isSupported()) return;
@@ -21,17 +25,28 @@ function createWindow() {
       contextIsolation: false,
     },
   });
+  mainWindow = win;
+  win.on("closed", () => { mainWindow = null; hustConnector.close(); });
 
   // Tải trực tiếp giao diện ứng dụng
   win.loadFile("index.html");
 }
 
-// Khởi chạy khi Electron sẵn sàng
-app.whenReady().then(createWindow);
-
-// Tắt hoàn toàn app khi đóng tất cả cửa sổ
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
+// Reopening the desktop shortcut focuses the existing app instead of creating
+// a second renderer whose stale task store would block subsequent saves.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    const win = mainWindow;
+    if (win) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    } else if (app.isReady()) createWindow();
+  });
+  app.whenReady().then(createWindow);
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit();
+  });
+}
