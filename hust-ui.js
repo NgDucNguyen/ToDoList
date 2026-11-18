@@ -4,14 +4,14 @@
     init({ getStore, renderAll, notice }) {
       const $ = id => document.getElementById(id), dialog = $('hust-dialog');
       const KEY = 'planner_hust_settings_v1', PERIOD = 6 * 60 * 60 * 1000;
-      let ipc, snapshot = null, busy = false, settings = { auto: false, lastCheck: 0 };
-      try { if (typeof require === 'function') ipc = require('electron').ipcRenderer; } catch { /* Browser mode. */ }
+      const ipc = window.plannerDesktop?.hust;
+      let snapshot = null, busy = false, settings = { auto: false, lastCheck: 0 };
       try {
         const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
         if (saved && typeof saved === 'object') settings = { auto: saved.auto === true, lastCheck: Number(saved.lastCheck) || 0 };
       } catch { /* Invalid preferences never alter task data. */ }
       const status = (message, error = false) => { $('hust-status').textContent = message; $('hust-status').classList.toggle('error', error); };
-      ipc?.on?.('hust:connection-status', (_event, message) => status(String(message), true));
+      ipc?.onStatus?.(message => status(String(message), true));
       const saveSettings = () => localStorage.setItem(KEY, JSON.stringify(settings));
       const summaryText = summary => `${summary.added} thêm · ${summary.updated} cập nhật · ${summary.archived} buổi được ẩn · ${summary.unchanged} giữ nguyên`;
       function refreshControls() {
@@ -42,7 +42,7 @@
       }
       async function apply(result, automatic = false) {
         const raw = localStorage.getItem(PlannerStore.DATA_KEY);
-        await ipc.invoke('hust:backup', raw);
+        await ipc.backup(raw);
         if (localStorage.getItem(PlannerStore.DATA_KEY) !== raw) throw new Error('Công việc vừa thay đổi trong lúc sao lưu. Hãy đọc lại lịch trước khi áp dụng.');
         const summary = getStore().applyHustSync(result);
         snapshot = null; settings.lastCheck = Date.now();
@@ -72,18 +72,18 @@
       $('close-hust-btn').addEventListener('click', () => dialog.close());
       $('hust-connect-btn').addEventListener('click', () => run(async () => {
         status('Đang mở cửa sổ HUST…');
-        await ipc.invoke('hust:connect');
+        await ipc.connect();
         status('Đăng nhập, chọn học kỳ trên HUST rồi quay lại bấm Đọc lịch / cập nhật.');
       }));
       $('hust-read-btn').addEventListener('click', () => run(async () => {
         snapshot = null; $('hust-preview').classList.add('hidden');
         status('Đang đọc thời khóa biểu HUST…');
-        const result = await ipc.invoke('hust:read', { refresh: false });
+        const result = await ipc.read({ refresh: false });
         preview(result); status('Đã đọc lịch. Kiểm tra bảng xem trước rồi bấm Áp dụng vào lịch.');
       }));
       $('hust-apply-btn').addEventListener('click', () => run(async () => { if (snapshot) await apply(snapshot); }));
       $('hust-disconnect-btn').addEventListener('click', () => run(async () => {
-        await ipc.invoke('hust:disconnect');
+        await ipc.disconnect();
         settings.auto = false; snapshot = null;
         $('hust-preview').classList.add('hidden');
         try { saveSettings(); } catch { /* Session was still cleared successfully. */ }
@@ -104,7 +104,7 @@
         await run(async () => {
           settings.lastCheck = Date.now();
           try { saveSettings(); } catch { /* This run remains rate-limited in memory. */ }
-          const result = await ipc.invoke('hust:read', { refresh: true });
+          const result = await ipc.read({ refresh: true });
           if (result.account !== saved.account || result.term !== saved.term) throw new Error('Tài khoản hoặc học kỳ HUST đã đổi. Mở Lịch học HUST để xem trước và áp dụng lại.');
           await apply(result, true);
         });

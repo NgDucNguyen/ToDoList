@@ -16,7 +16,7 @@ if (!process.versions.electron) {
   app.setPath('userData', profile);
   app.setPath('sessionData', profile);
   app.whenReady().then(async () => {
-    const window = new BrowserWindow({ show: false, width: 1280, height: 800, webPreferences: { nodeIntegration: true, contextIsolation: false, backgroundThrottling: false } });
+    const window = new BrowserWindow({ show: false, width: 1280, height: 800, webPreferences: { preload: path.join(__dirname, '..', 'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true, backgroundThrottling: false } });
     await window.loadFile(path.join(__dirname, '..', 'index.html'));
     let result = await window.webContents.executeJavaScript(`({ api: typeof PlannerStore.createStore === 'function', days: document.querySelectorAll('.day-cell').length, error: document.getElementById('app-notice').classList.contains('error') })`);
     if (!result.api || result.days < 28 || result.error) throw new Error('Electron renderer did not initialize: ' + JSON.stringify(result));
@@ -50,7 +50,24 @@ if (!process.versions.electron) {
     window.webContents.reload(); await notesReload;
     const notesSaved = await window.webContents.executeJavaScript(`(() => {document.getElementById('notes-nav-link').click();return document.getElementById('note-body-input').value==='Tiếng Việt\\n\\tGiữ khoảng trắng  ';})()`);
     if (!notesSaved) throw new Error('Pending notes did not persist through Electron reload.');
-    console.log('PASS: actual Electron renderer, migration, persistent reload, recurring tasks, photo background and notes flushed before reload.');
+    const bridge = await window.webContents.executeJavaScript(`({node:typeof require,process:typeof process,chat:typeof window.plannerDesktop.chat,hust:typeof window.plannerDesktop.hust.connect})`);
+    if(bridge.node!=='undefined'||bridge.process!=='undefined'||bridge.chat!=='undefined'||bridge.hust!=='function')throw new Error('Secure desktop bridge failed: '+JSON.stringify(bridge));
+    let networkRequests=0;
+    window.webContents.session.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_details,callback)=>{networkRequests++;callback({cancel:true});});
+    await window.webContents.executeJavaScript(`(async () => {
+      document.getElementById('cb-launcher').click();
+      const send=async text=>{document.getElementById('cb-input').value=text;document.getElementById('cb-form').requestSubmit();for(let i=0;i<100&&document.getElementById('cb-send').disabled;i++)await new Promise(r=>setTimeout(r,20));};
+      await send('Thêm lịch thử offline ngày mai 19h');
+      const accept=document.querySelector('.cb-accept');if(!accept)throw new Error('Offline chat did not propose task');accept.click();
+      if(!JSON.parse(localStorage.getItem(PlannerStore.DATA_KEY)).tasks.some(t=>t.title==='thử offline'))throw new Error('Offline task not saved');
+      await send('Ghi chú: Không cần mạng');
+      const buttons=document.querySelectorAll('.cb-accept');buttons[buttons.length-1].click();
+      if(!JSON.parse(localStorage.getItem(PlannerNotesStore.KEY)).notes.some(n=>n.body==='Không cần mạng'))throw new Error('Offline note not saved');
+      await send('Tóm tắt tuần này');
+      if(document.getElementById('cb-status').classList.contains('error'))throw new Error('Offline summary failed');
+    })()`);
+    if(networkRequests)throw new Error('Local chatbot attempted '+networkRequests+' network requests');
+    console.log('PASS: Electron isolation/preload, migration, photo, notes, actual offline chatbot tasks/notes/summary and zero network requests.');
     console.log('Isolated profile: ' + profile);
     app.quit();
   }).catch(error => { console.error(error.stack || error); app.exit(1); });

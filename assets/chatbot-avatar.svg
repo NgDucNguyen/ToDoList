@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="50" fill="#fff"/>
+  <path d="M10 49h13l9 29C44 18 55 13 64 24c9 11 17 36 24 54" fill="none" stroke="#195ba0" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="44" y="76" fill="#195ba0" font-family="Georgia,serif" font-size="40" font-weight="bold">it</text>
+</svg>

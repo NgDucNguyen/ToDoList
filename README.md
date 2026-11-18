@@ -56,6 +56,24 @@ Mở **Ghi chú** trên thanh bên → **Ghi chú mới** để viết văn bả
 
 Mã liên quan: `notes-store.js` (lưu dữ liệu), `notes.js` (soạn thảo và tự lưu).
 
+## Chatbot
+
+Bấm avatar tròn ở góc dưới bên phải để mở **Chatbot nội bộ**. Chatbot không cần Internet, API key, dịch vụ AI hoặc tải model bên ngoài. Câu hỏi, lịch và ghi chú được xử lý ngay trong app, dùng được cả khi mở `index.html` trên trình duyệt và trong EXE. Riêng chức năng đồng bộ QLĐT HUST vẫn cần kết nối tới HUST như trước.
+
+Mô hình nhận diện 14 nhóm yêu cầu được huấn luyện từ 275 câu mẫu tiếng Việt do project cung cấp, bằng đặc trưng từ/cụm từ/ký tự và hồi quy softmax. Model đóng gói trong `chatbot-model.js`. Đây là mô hình phân loại ý định chuyên cho Planner kết hợp bộ đọc ngày giờ và câu trả lời có kiểm soát, **không phải mô hình ngôn ngữ lớn được huấn luyện từ đầu**. Không tự lấy dữ liệu cá nhân làm mẫu huấn luyện và không cam kết hiểu mọi cách diễn đạt. Khi độ tin cậy thấp, bot yêu cầu nói rõ thay vì tự ghi dữ liệu.
+
+Ví dụ: “Mai tôi học môn nào?”, “Tóm tắt lịch tuần này”, “Việc nào quá hạn?”, “Xem việc chưa lên lịch”, “Hôm nay làm xong những việc nào?”, “Tuần sau hôm nào ít việc nhất?”, “Kiểm tra trùng lịch ngày mai”, “Tìm ghi chú Ý tưởng”, “Cách sao lưu dữ liệu”. Các câu không dấu cũng được nhận diện. Lịch lặp được đọc theo từng lần; buổi HUST đã ẩn không được liệt kê. Bot chỉ thấy lịch đã có trong app, không tự đọc QLĐT và không suy ra toàn bộ lịch HUST đã đầy đủ.
+
+Không cần chọn phạm vi ngày. Nếu câu hỏi nêu ngày, bot tự hiểu hôm nay/mai/ngày kia, thứ 2–CN, tuần này/sau, tháng này/sau, ngày/tháng[/năm] hoặc YYYY-MM-DD. Nếu không nêu ngày, tìm toàn bộ lịch/công việc đã lưu, gồm quá khứ, tương lai và việc chưa có ngày; không giới hạn mặc định 62 ngày/500 lịch. Kết quả dài chia 20 mục mỗi lượt, gõ “xem tiếp” để đọc tiếp. Chuỗi lặp hiển thị theo quy luật; hỏi ngày/tuần để xem từng lần, tránh đếm vô hạn chuỗi chưa có ngày kết thúc. Xem hoàn thành/chưa hoàn thành toàn bộ chỉ đếm việc đơn và trạng thái từng lần lặp đã ghi nhận riêng. Hỏi ngày ít lịch hoặc trùng giờ mà không nêu thời gian thì bot tự xem 7 ngày tới và ghi rõ mốc đó. So sánh ngày ít/bận dựa trên số lịch đã lưu, không khẳng định rảnh hoàn toàn; trùng giờ chỉ kết luận cho lịch đủ giờ bắt đầu/kết thúc.
+
+Tạo công việc: “Thêm lịch đọc sách ngày mai 19h”, hoặc “Tạo lịch họp nhóm” rồi trả lời ngày/giờ khi bot hỏi. Giờ hỗ trợ HH:mm, 19h, 8h30, 7 giờ tối; nhập “cả ngày” để không đặt giờ. Tạo ghi chú: “Ghi chú: nội dung” hoặc “Tạo ghi chú Ý tưởng với nội dung: ...”. Bot giữ nội dung ghi chú và xuống dòng. Mỗi lần chỉ đề xuất một việc cá nhân hoặc một ghi chú, **Xác nhận tạo** mới ghi, **Bỏ qua** không ghi. Thiếu thông tin thì hỏi lại; gõ “hủy” bỏ yêu cầu đang điền. Không tự sửa/xóa, tạo HUST, nhiều công việc hay lịch lặp. “Nhắc tôi ...” tạo công việc; muốn thông báo Windows, mở chi tiết và chọn Nhắc việc.
+
+Huấn luyện lại: thêm ví dụ vào đúng nhóm trong `chatbot-training.json`, giữ tập `evaluation` tách biệt, chạy `npm.cmd run train:chatbot` rồi `npm.cmd test`. Script huấn luyện có seed cố định, không dùng mạng hoặc dữ liệu lịch cá nhân; xuất trọng số và `chatbot-training-report.json`. Bản đầu nhận đúng 43/46 câu của tập kiểm tra cố định (93,48%); đây chỉ là điểm phân loại trên bộ ví dụ nhỏ, không phải độ chính xác chung của chatbot. Bộ kiểm tra ngày giờ, dữ liệu và thao tác chạy riêng. `npm.cmd run build-exe` tự huấn luyện lại trước khi đóng gói.
+
+Cuộc trò chuyện và yêu cầu chưa xác nhận chỉ giữ trong phiên hiện tại. Lịch/ghi chú đã xác nhận lưu bình thường. Nếu có file cấu hình key từ bản cũ, bản nội bộ không đọc hay sử dụng file đó. HUST/reminder tiếp tục dùng preload cách ly; chatbot không dùng IPC mạng. Các kiểm tra giao diện/desktop sử dụng mô hình và câu trả lời nội bộ thật trong hồ sơ tạm, có chặn mạng để phát hiện yêu cầu ra ngoài.
+
+Mã liên quan: `chatbot.js`/`chatbot.css` (giao diện), `chatbot-core.js` (đọc/lưu được kiểm tra), `chatbot-nlu.js` (đặc trưng/phân loại), `chatbot-local.js` (ngày giờ/hội thoại), `chatbot-knowledge.js` (kiến thức app), `scripts/train-chatbot.cjs` (huấn luyện). Avatar mặc định là SVG ViT, thay ảnh và cập nhật đường dẫn trong `index.html` nếu muốn.
+
 ## Đồng bộ lịch học HUST
 
 Thanh bên có hai trang lịch riêng: **Lịch** dành cho công việc cá nhân, **Lịch HUST** dành cho buổi học. Hai lịch có khung tháng và nút chuyển tháng độc lập. **Công việc** và Kanban hiển thị việc cá nhân. Trong hộp thêm/sửa, mục **Lưu vào lịch** cho phép chuyển việc tự thêm giữa hai lịch.

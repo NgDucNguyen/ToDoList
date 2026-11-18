@@ -24,9 +24,11 @@
       storage.setItem(KEY, nextRaw); state = next; raw = nextRaw;
       return result;
     }
-    function create() {
+    function create(values = {}) {
+      const title = values.title ?? '', body = values.body ?? '';
+      if (typeof title !== 'string' || title.length > 200 || typeof body !== 'string' || body.length > 100000) throw new Error('Tiêu đề hoặc nội dung ghi chú không hợp lệ.');
       const now = new Date().toISOString();
-      const note = { id: globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2)}`, title: '', body: '', created_at: now, updated_at: now };
+      const note = { id: globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2)}`, title, body, created_at: now, updated_at: now };
       commit(next => next.notes.unshift(note)); return copy(note);
     }
     function update(noteId, title, body) {

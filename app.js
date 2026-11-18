@@ -595,8 +595,8 @@
     const message = due.length === 1 ? `${due[0].title} · ${due[0].time}` : `${due.length} công việc sắp đến giờ`;
     $("reminder-banner-message").textContent = `Nhắc việc: ${message}`;
     $("reminder-banner").classList.remove("hidden");
-    if (typeof require === "function") {
-      try { require("electron").ipcRenderer.send("planner:reminder", message); } catch { /* Web mode still shows the in-app notice. */ }
+    if (window.plannerDesktop) {
+      window.plannerDesktop.reminder(message);
     } else if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       new Notification("Nhắc việc · Daily Planner", { body: message });
     }
@@ -628,5 +628,17 @@
   renderAll();
   window.PlannerHustUI?.init({ getStore: () => store, renderAll, notice });
   window.PlannerNotes?.init({ notice, confirmDelete });
+  window.PlannerChatbot?.init({
+    getContext: (from, to) => PlannerChatbotCore.getContext(store, PlannerStore, from, to),
+    getTaskList: (mode, date) => store.todo(mode, date),
+    getNotes: () => window.PlannerNotes?.listForChat?.() || [],
+    applyProposal(proposal) {
+      const result = PlannerChatbotCore.applyProposal(proposal, { store, dates: PlannerStore, createNote: window.PlannerNotes?.createFromChat });
+      if (result.kind === 'create_task') { viewDate = parseDate(result.item.task_date); showView('calendar'); }
+      else showView('notes');
+      notice(result.message);
+      return result.message;
+    },
+  });
   checkReminders();
 })();

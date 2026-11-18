@@ -82,6 +82,16 @@
       window.addEventListener('beforeunload', event => { if (!flush()) { event.preventDefault(); event.returnValue = ''; } });
       document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
       window.PlannerNotes.flush = flush;
+      window.PlannerNotes.listForChat = () => {
+        if (!flush()) throw new Error('Ghi chú đang sửa chưa lưu được. Hãy lưu hoặc xuất TXT trước.');
+        return store.notes;
+      };
+      window.PlannerNotes.createFromChat = (title, body) => {
+        if (!flush()) throw new Error('Ghi chú đang sửa chưa lưu được. Hãy lưu hoặc xuất TXT trước.');
+        const note = store.create({ title, body });
+        $('notes-search-input').value = ''; select(note.id);
+        return note;
+      };
       select(store.notes[0]?.id);
     },
   };

@@ -1,0 +1,354 @@
+{
+  "trainingExamples": 275,
+  "evaluationExamples": 46,
+  "correct": 43,
+  "accuracy": 0.9348,
+  "note": "Fixed held-out examples, not a guarantee for arbitrary Vietnamese. Calendar/date/action tests are separate.",
+  "failures": [
+    {
+      "text": "hôm nay làm xong những việc nào",
+      "expected": "completed",
+      "predicted": "unfinished",
+      "confidence": 0.911,
+      "correct": false
+    },
+    {
+      "text": "xóa các ghi chú",
+      "expected": "unsupported",
+      "predicted": "search_notes",
+      "confidence": 0.589,
+      "correct": false
+    },
+    {
+      "text": "tạo lịch lặp hằng tuần",
+      "expected": "unsupported",
+      "predicted": "create_task",
+      "confidence": 0.319,
+      "correct": false
+    }
+  ],
+  "predictions": [
+    {
+      "text": "chao bot nhe",
+      "expected": "greeting",
+      "predicted": "greeting",
+      "confidence": 0.974,
+      "correct": true
+    },
+    {
+      "text": "cảm ơn trợ lý",
+      "expected": "greeting",
+      "predicted": "greeting",
+      "confidence": 0.993,
+      "correct": true
+    },
+    {
+      "text": "hướng dẫn mình đổi nền app",
+      "expected": "help",
+      "predicted": "help",
+      "confidence": 0.721,
+      "correct": true
+    },
+    {
+      "text": "làm thế nào để sao lưu",
+      "expected": "help",
+      "predicted": "help",
+      "confidence": 0.999,
+      "correct": true
+    },
+    {
+      "text": "cach them ghi chu",
+      "expected": "help",
+      "predicted": "help",
+      "confidence": 0.629,
+      "correct": true
+    },
+    {
+      "text": "có mất lịch khi build lại không",
+      "expected": "help",
+      "predicted": "help",
+      "confidence": 0.425,
+      "correct": true
+    },
+    {
+      "text": "cách đồng bộ thời khóa biểu",
+      "expected": "help",
+      "predicted": "help",
+      "confidence": 0.705,
+      "correct": true
+    },
+    {
+      "text": "mai toi hoc mon nao",
+      "expected": "schedule",
+      "predicted": "schedule",
+      "confidence": 0.96,
+      "correct": true
+    },
+    {
+      "text": "hôm nay có việc gì không",
+      "expected": "schedule",
+      "predicted": "schedule",
+      "confidence": 0.733,
+      "correct": true
+    },
+    {
+      "text": "cho tôi xem lịch t5 tuần sau",
+      "expected": "schedule",
+      "predicted": "schedule",
+      "confidence": 0.97,
+      "correct": true
+    },
+    {
+      "text": "ngày 23/11 tôi có lịch nào",
+      "expected": "schedule",
+      "predicted": "schedule",
+      "confidence": 0.893,
+      "correct": true
+    },
+    {
+      "text": "xem lịch học ngày kia",
+      "expected": "schedule",
+      "predicted": "schedule",
+      "confidence": 0.993,
+      "correct": true
+    },
+    {
+      "text": "tổng hợp lại lịch của tuần tới",
+      "expected": "summary",
+      "predicted": "summary",
+      "confidence": 0.96,
+      "correct": true
+    },
+    {
+      "text": "tom tat lich hoc tuan nay",
+      "expected": "summary",
+      "predicted": "summary",
+      "confidence": 0.993,
+      "correct": true
+    },
+    {
+      "text": "cho mình tổng quan công việc",
+      "expected": "summary",
+      "predicted": "summary",
+      "confidence": 0.701,
+      "correct": true
+    },
+    {
+      "text": "còn việc gì bị quá deadline",
+      "expected": "overdue",
+      "predicted": "overdue",
+      "confidence": 0.956,
+      "correct": true
+    },
+    {
+      "text": "những việc nào trễ hạn rồi",
+      "expected": "overdue",
+      "predicted": "overdue",
+      "confidence": 0.941,
+      "correct": true
+    },
+    {
+      "text": "xem viec qua han chua xong",
+      "expected": "overdue",
+      "predicted": "overdue",
+      "confidence": 0.978,
+      "correct": true
+    },
+    {
+      "text": "hôm nay tôi còn gì chưa hoàn thành",
+      "expected": "unfinished",
+      "predicted": "unfinished",
+      "confidence": 0.812,
+      "correct": true
+    },
+    {
+      "text": "công việc nào còn dang dở tuần tới",
+      "expected": "unfinished",
+      "predicted": "unfinished",
+      "confidence": 0.818,
+      "correct": true
+    },
+    {
+      "text": "xem viec chua xong",
+      "expected": "unfinished",
+      "predicted": "unfinished",
+      "confidence": 0.828,
+      "correct": true
+    },
+    {
+      "text": "hôm nay làm xong những việc nào",
+      "expected": "completed",
+      "predicted": "unfinished",
+      "confidence": 0.911,
+      "correct": false
+    },
+    {
+      "text": "liệt kê các việc đã hoàn tất tuần này",
+      "expected": "completed",
+      "predicted": "completed",
+      "confidence": 0.974,
+      "correct": true
+    },
+    {
+      "text": "tìm công việc chưa chọn ngày",
+      "expected": "unscheduled",
+      "predicted": "unscheduled",
+      "confidence": 0.909,
+      "correct": true
+    },
+    {
+      "text": "xem việc không có lịch",
+      "expected": "unscheduled",
+      "predicted": "unscheduled",
+      "confidence": 0.535,
+      "correct": true
+    },
+    {
+      "text": "tìm giúp tôi ngày ít lịch nhất tuần sau",
+      "expected": "free_time",
+      "predicted": "free_time",
+      "confidence": 0.954,
+      "correct": true
+    },
+    {
+      "text": "tôi có thời gian trống vào hôm nào",
+      "expected": "free_time",
+      "predicted": "free_time",
+      "confidence": 0.91,
+      "correct": true
+    },
+    {
+      "text": "ngày nào tuần này bận nhất",
+      "expected": "free_time",
+      "predicted": "free_time",
+      "confidence": 0.987,
+      "correct": true
+    },
+    {
+      "text": "có buổi học nào trùng với nhau không",
+      "expected": "conflicts",
+      "predicted": "conflicts",
+      "confidence": 0.923,
+      "correct": true
+    },
+    {
+      "text": "kiem tra trung gio lich hop",
+      "expected": "conflicts",
+      "predicted": "conflicts",
+      "confidence": 0.997,
+      "correct": true
+    },
+    {
+      "text": "thêm lịch đọc tài liệu mai 18:30",
+      "expected": "create_task",
+      "predicted": "create_task",
+      "confidence": 0.96,
+      "correct": true
+    },
+    {
+      "text": "tạo công việc làm báo cáo thứ hai 9h",
+      "expected": "create_task",
+      "predicted": "create_task",
+      "confidence": 0.9,
+      "correct": true
+    },
+    {
+      "text": "nhắc tôi đi họp mai 7 giờ tối",
+      "expected": "create_task",
+      "predicted": "create_task",
+      "confidence": 0.825,
+      "correct": true
+    },
+    {
+      "text": "tao lich doc sach ngay kia 20h",
+      "expected": "create_task",
+      "predicted": "create_task",
+      "confidence": 0.936,
+      "correct": true
+    },
+    {
+      "text": "đặt lịch tập gym ngày 24/11",
+      "expected": "create_task",
+      "predicted": "create_task",
+      "confidence": 0.592,
+      "correct": true
+    },
+    {
+      "text": "ghi chú: ôn lại chương ba",
+      "expected": "create_note",
+      "predicted": "create_note",
+      "confidence": 0.751,
+      "correct": true
+    },
+    {
+      "text": "tao note y tuong voi noi dung thu nghiem",
+      "expected": "create_note",
+      "predicted": "create_note",
+      "confidence": 0.959,
+      "correct": true
+    },
+    {
+      "text": "ghi nhanh danh sách cần mua",
+      "expected": "create_note",
+      "predicted": "create_note",
+      "confidence": 0.817,
+      "correct": true
+    },
+    {
+      "text": "tìm note về lịch ôn thi",
+      "expected": "search_notes",
+      "predicted": "search_notes",
+      "confidence": 0.362,
+      "correct": true
+    },
+    {
+      "text": "cho mình xem ghi chú dự án",
+      "expected": "search_notes",
+      "predicted": "search_notes",
+      "confidence": 0.916,
+      "correct": true
+    },
+    {
+      "text": "liệt kê các ghi chú đã lưu",
+      "expected": "search_notes",
+      "predicted": "search_notes",
+      "confidence": 0.959,
+      "correct": true
+    },
+    {
+      "text": "tính giá chứng khoán hôm nay",
+      "expected": "unsupported",
+      "predicted": "unsupported",
+      "confidence": 0.449,
+      "correct": true
+    },
+    {
+      "text": "xóa các ghi chú",
+      "expected": "unsupported",
+      "predicted": "search_notes",
+      "confidence": 0.589,
+      "correct": false
+    },
+    {
+      "text": "sửa lịch đọc sách sang ngày kia",
+      "expected": "unsupported",
+      "predicted": "unsupported",
+      "confidence": 0.761,
+      "correct": true
+    },
+    {
+      "text": "tạo lịch lặp hằng tuần",
+      "expected": "unsupported",
+      "predicted": "create_task",
+      "confidence": 0.319,
+      "correct": false
+    },
+    {
+      "text": "viết truyện cho trẻ con",
+      "expected": "unsupported",
+      "predicted": "unsupported",
+      "confidence": 0.431,
+      "correct": true
+    }
+  ]
+}

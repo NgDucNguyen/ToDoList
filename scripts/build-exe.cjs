@@ -19,7 +19,7 @@ async function build() {
     icon: path.join(root, 'Calendar.ico'),
     overwrite: false,
     // Exclude every previous release, including the new output directory.
-    ignore: [/^\/dist(?:\/|$)/],
+    ignore: [/^\/dist(?:\/|$)/, /^\/\.env(?:\.|$)/, /^\/chatbot-config\.json$/],
   });
   for (const release of releases) {
     console.log(`EXE: ${path.join(release, 'MyDailyPlanner.exe')}`);

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Calendar To-Do-List</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="chatbot.css" />
   </head>
   <body>
     <div id="app-background" aria-hidden="true"><div class="background-image"></div><div class="background-veil"></div></div>
@@ -515,11 +516,32 @@
       <p class="view-hint">Chỉ bật tự động sau lần áp dụng đầu tiên. Khi phiên hết hạn, bạn cần đăng nhập lại trong cửa sổ HUST. Buổi không còn trong thời khóa biểu gốc được ẩn và giữ dữ liệu; việc tự tạo, ghi chú và trạng thái hoàn thành được giữ lại.</p>
       <div class="modal-actions hust-footer"><button id="hust-disconnect-btn" type="button" class="btn-outline">Ngắt kết nối</button><button id="hust-apply-btn" type="button" class="btn-primary" disabled>3. Áp dụng vào Lịch HUST</button></div>
     </dialog>
+    <button id="cb-launcher" type="button" aria-label="Mở Chatbot" aria-controls="cb-panel" aria-expanded="false" title="Chatbot · Trợ lý Daily Planner"><img src="assets/chatbot-avatar.svg" alt="" /></button>
+    <section id="cb-panel" role="region" aria-label="Chatbot" hidden>
+      <header class="cb-header">
+        <img src="assets/chatbot-avatar.svg" alt="" />
+        <div><strong>Chatbot</strong><small>Nội bộ · Không cần mạng hay API key</small></div>
+        <div class="cb-header-actions"><button id="cb-new-chat" type="button" aria-label="Cuộc trò chuyện mới" title="Cuộc trò chuyện mới">↻</button><button id="cb-close" type="button" aria-label="Đóng Chatbot">×</button></div>
+      </header>
+      <div class="cb-options">
+        <p class="cb-local-badge">● Sẵn sàng · Dữ liệu được giữ trên máy</p>
+      </div>
+      <div id="cb-messages" role="log" aria-label="Cuộc trò chuyện" aria-live="polite"></div>
+      <p id="cb-status" role="status"></p>
+      <form id="cb-form"><label class="cb-sr-only" for="cb-input">Tin nhắn</label><textarea id="cb-input" rows="2" maxlength="3000" placeholder="Hỏi về app hoặc nhờ lên lịch…" required></textarea><button id="cb-send" type="submit" aria-label="Gửi tin nhắn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m3 3 19 9-19 9 4-9-4-9Zm4.5 8H16L6.8 6.7l.7 4.3Zm0 2-.7 4.3L16 13H7.5Z"/></svg></button></form>
+      <p class="cb-footer">Enter để gửi · Shift+Enter xuống dòng · Kiểm tra đề xuất trước khi tạo</p>
+    </section>
     <script src="planner-store.js"></script>
     <script src="lunar.js"></script>
     <script src="hust-ui.js"></script>
     <script src="notes-store.js"></script>
     <script src="notes.js"></script>
+    <script src="chatbot-core.js"></script>
+    <script src="chatbot-nlu.js"></script>
+    <script src="chatbot-model.js"></script>
+    <script src="chatbot-knowledge.js"></script>
+    <script src="chatbot-local.js"></script>
+    <script src="chatbot.js"></script>
     <script src="app.js"></script>
     <script src="appearance.js"></script>
   </body>

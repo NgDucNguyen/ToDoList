@@ -6,7 +6,7 @@ const hustConnector = createHustConnector(app, () => mainWindow);
 hustConnector.register(ipcMain);
 
 ipcMain.on("planner:reminder", (event, message) => {
-  if (!BrowserWindow.fromWebContents(event.sender) || !Notification.isSupported()) return;
+  if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== mainWindow.webContents.mainFrame || !Notification.isSupported()) return;
   const body = typeof message === "string" ? message.slice(0, 200) : "";
   if (body) new Notification({ title: "Nhắc việc · Daily Planner", body }).show();
 });
@@ -21,11 +21,15 @@ function createWindow() {
     icon: path.join(__dirname, "Calendar.ico"),
     autoHideMenuBar: true, // Ẩn thanh menu File/Edit mặc định cho giao diện sạch sẽ
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
     },
   });
   mainWindow = win;
+  win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  win.webContents.on("will-navigate", event => event.preventDefault());
   win.webContents.on("will-prevent-unload", (event) => {
     const choice = dialog.showMessageBoxSync(win, {
       type: "warning", title: "Ghi chú chưa lưu", message: "Chưa lưu được nội dung ghi chú đang sửa.",

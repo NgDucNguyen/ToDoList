@@ -10,7 +10,9 @@ const renderer = path.join(__dirname, 'render-checks.cjs');
 const runtimeEnv = { ...process.env };
 delete runtimeEnv.ELECTRON_RUN_AS_NODE;
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('<link rel="stylesheet" href="style.css" />', () => '<style>' + fs.readFileSync(path.join(root, 'style.css'), 'utf8') + '</style>');
-for (const name of ['planner-store.js', 'lunar.js', 'hust-ui.js', 'notes-store.js', 'notes.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
+html = html.replace('<link rel="stylesheet" href="chatbot.css" />', () => '<style>' + fs.readFileSync(path.join(root, 'chatbot.css'), 'utf8') + '</style>');
+html = html.replaceAll('assets/chatbot-avatar.svg', 'data:image/svg+xml;base64,' + fs.readFileSync(path.join(root, 'assets', 'chatbot-avatar.svg')).toString('base64'));
+for (const name of ['planner-store.js', 'lunar.js', 'hust-ui.js', 'notes-store.js', 'notes.js', 'chatbot-core.js', 'chatbot-nlu.js', 'chatbot-model.js', 'chatbot-knowledge.js', 'chatbot-local.js', 'chatbot.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
 const initialize = `
 window.addEventListener('error',event=>parent.__errors.push(event.message));
 const RealDate=Date; window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:[RealDate.UTC(2026,10,11,5)]));}static now(){return RealDate.UTC(2026,10,11,5);}};
@@ -19,7 +21,10 @@ Object.defineProperty(window,'localStorage',{value:{getItem:key=>parent.__storag
 Object.defineProperty(window,'Notification',{configurable:true,value:class {static permission='denied';}});
 // Electron exposes CommonJS globals in a renderer with nodeIntegration enabled.
 if(parent.__electronMode) window.module={exports:{}};
-if(parent.__hustMock) window.require=name=>{if(name!=='electron')throw new Error('Unexpected module');return {ipcRenderer:{invoke:(channel,arg)=>parent.__hustMock(channel,arg)}};};
+if(parent.__hustMock) window.plannerDesktop={
+reminder:()=>{},
+hust:parent.__hustMock?{connect:()=>parent.__hustMock('hust:connect'),read:arg=>parent.__hustMock('hust:read',arg),backup:arg=>parent.__hustMock('hust:backup',arg),disconnect:()=>parent.__hustMock('hust:disconnect')}:undefined,
+};
 `;
 html = html.replace('<head>', () => '<head><script>' + initialize + '</script>');
 const old = {
@@ -271,6 +276,39 @@ async function browserChecks(source, legacy) {
     assert(window.__storage.planner_data_v2===tasksBeforeNotes,'Notes changed calendar/task data');
     results.push('Notes autosave/reload, Unicode and whitespace, search, TXT export, failed save retry, deletion backup and calendar isolation');
 
+    doc=await load();click('#cb-launcher');
+    const originalChatFetch=frame.contentWindow.fetch;
+    frame.contentWindow.fetch=()=>{throw new Error('Network forbidden for local bot');};
+    assert(!doc.querySelector('#cb-panel').hidden,'Chatbot did not open');
+    const sendChat=async text=>{value('#cb-input',text);doc.querySelector('#cb-form').requestSubmit();await waitFor(()=>!doc.querySelector('#cb-send').disabled,'Chat did not complete');};
+    const beforeChat=data().tasks.length;
+    await sendChat('Tạo lịch đọc sách ngày mai 19:00');
+    assert(data().tasks.length===beforeChat,'Local bot wrote a task before confirmation');
+    click('.cb-accept');click('.cb-accept');
+    assert(data().tasks.length===beforeChat+1,'Repeated confirmation created duplicates');
+    assert(data().tasks.at(-1).calendar_id==='personal','Chat wrote HUST calendar');
+    assert(data().tasks.at(-1).task_date==='2026-11-12'&&data().tasks.at(-1).time==='19:00','Local date/time parse failed');
+    assert(!doc.querySelector('#cb-messages img'),'Chat rendered AI text as HTML');
+    const chatNoteBody='Tiếng Việt\n  Giữ khoảng trắng  ';
+    await sendChat('Tạo ghi chú Ghi từ chatbot với nội dung: '+chatNoteBody);
+    const noteCount=JSON.parse(window.__storage.planner_notes_v1).notes.length;
+    const accepts=doc.querySelectorAll('.cb-accept');accepts[accepts.length-1].click();
+    assert(JSON.parse(window.__storage.planner_notes_v1).notes.length===noteCount+1,'Confirmed note not created');
+    assert(doc.querySelector('#note-body-input').value===chatNoteBody,'Chat note lost text');
+    await sendChat('Tìm ghi chú Ghi từ chatbot');assert(doc.querySelector('#cb-messages').textContent.includes(chatNoteBody),'Local note retrieval failed');
+    await sendChat('Tạo lịch họp nhóm');assert(doc.querySelector('#cb-messages').lastElementChild.textContent.includes('ngày nào'),'Missing date was guessed');
+    await sendChat('ngày mai');await sendChat('7 giờ tối');
+    const followupAccepts=doc.querySelectorAll('.cb-accept');followupAccepts[followupAccepts.length-1].click();assert(data().tasks.at(-1).title==='họp nhóm'&&data().tasks.at(-1).time==='19:00','Follow-up slots failed');
+    await sendChat('Ghi chú: <img src=x onerror=alert(1)>');assert(!doc.querySelector('#cb-messages img'),'Reply interpreted as HTML');
+    assert(!doc.querySelector('#cb-from,#cb-to'),'Chatbot still requires date pickers');
+    await sendChat('Xem toàn bộ lịch');assert(doc.querySelector('#cb-messages').lastElementChild.textContent.includes('Toàn bộ'),'No-date request did not read all data');
+    await sendChat('xóa các ghi chú');assert(doc.querySelector('#cb-messages').lastElementChild.textContent.includes('Chưa hỗ trợ'),'Destructive command accepted');
+    const taskCountBeforeRead=data().tasks.length;await sendChat('Tóm tắt lịch tuần này');assert(data().tasks.length===taskCountBeforeRead,'Summary changed tasks');
+    click('#cb-new-chat');assert(!doc.querySelector('.cb-proposal'),'New conversation retained stale action');
+    click('#cb-close');assert(doc.querySelector('#cb-panel').hidden&&doc.activeElement.id==='cb-launcher','Close did not restore focus');
+    frame.contentWindow.fetch=originalChatFetch;
+    results.push('Real offline intent model/date parser, confirmed tasks/notes, exact text, follow-up questions, local retrieval, safety and no network');
+
     const tasksBeforePhoto=window.__storage.planner_data_v2;
     await waitFor(()=>doc.body.dataset.appearanceReady==='true','Appearance did not initialize');
     const canvas=doc.createElement('canvas');canvas.width=3200;canvas.height=1800;
@@ -317,7 +355,7 @@ async function browserChecks(source, legacy) {
     await waitFor(()=>!doc.querySelector('#choose-background-btn').disabled&&doc.body.classList.contains('has-background'),'Could not restore test background');click('#save-background-btn');await waitFor(()=>!doc.querySelector('#appearance-dialog').open,'Test background save failed');
     results.push('Local photo upload, resizing, persistent settings, cancel/reset, invalid images, storage failure and task isolation');
 
-    window.__electronMode=true;doc=await load();assert(frame.contentWindow.PlannerStore&&frame.contentWindow.module.exports.createStore,'Electron CommonJS renderer failed');
+    window.__electronMode=true;doc=await load();assert(frame.contentWindow.PlannerStore.createStore&&frame.contentWindow.PlannerChatbotCore.validateResult&&frame.contentWindow.PlannerLocalChatbot.createSession,'CommonJS-compatible shared modules failed');
     window.__electronMode=false;results.push('Electron-compatible script loading');
     for(const [width,height] of [[1920,1080],[1280,800],[1100,720],[900,600],[640,480],[390,844],[360,640],[1280,520]]) {
       doc=await load(width,height);
@@ -344,6 +382,10 @@ async function browserChecks(source, legacy) {
       click('#hust-add-lesson-btn');noOverflow('#task-modal .modal-card');assert(doc.querySelector('#task-calendar-input').value==='hust','School add button lost calendar context');click('#cancel-task-btn');calendar();
       click('#notes-nav-link');['body','.main-content','#notes-view','.notes-workspace','.note-editor','.note-editor-toolbar'].forEach(noOverflow);
       const editorRect=doc.querySelector('#note-body-input').getBoundingClientRect();assert(editorRect.width>100&&editorRect.height>=70,'Notes editor became unusable at '+width+'x'+height);calendar();
+      click('#cb-launcher');const chatRect=doc.querySelector('#cb-panel').getBoundingClientRect();
+      assert(chatRect.left>=0&&chatRect.top>=0&&chatRect.right<=width+1&&chatRect.bottom<=height+1,'Chatbot clipped at '+width+'x'+height);
+      ['#cb-panel','#cb-form'].forEach(noOverflow);
+      const chatSend=doc.querySelector('#cb-send').getBoundingClientRect();assert(chatSend.bottom<=height&&chatSend.top>=0,'Chat send button clipped');click('#cb-close');
       await openAppearance();noOverflow('#appearance-dialog');const appearanceRect=doc.querySelector('#appearance-dialog').getBoundingClientRect();assert(appearanceRect.left>=-1&&appearanceRect.right<=width+1&&appearanceRect.top>=-1&&appearanceRect.bottom<=height+1,'Background dialog clipped');click('#cancel-appearance-btn');
       results.push(`Layout ${width}x${height}`);
     }
@@ -367,7 +409,7 @@ else{
   if(report.failures.length) process.exitCode=1;
   if(!report.failures.length&&process.argv.includes('--screenshots')){
     const jobs=[];
-    for(const [width,height,view] of [[1280,800,'calendar'],[900,600,'today'],[640,480,'calendar'],[390,844,'today'],[1280,800,'form'],[1280,800,'project'],[1280,800,'appearance'],[1280,800,'hust'],[390,844,'hust'],[1280,800,'hust-calendar'],[640,480,'hust-calendar'],[390,844,'hust-calendar'],[1280,800,'notes'],[640,480,'notes'],[390,844,'notes']]){
+    for(const [width,height,view] of [[1280,800,'calendar'],[900,600,'today'],[640,480,'calendar'],[390,844,'today'],[1280,800,'form'],[1280,800,'project'],[1280,800,'appearance'],[1280,800,'hust'],[390,844,'hust'],[1280,800,'hust-calendar'],[640,480,'hust-calendar'],[390,844,'hust-calendar'],[1280,800,'notes'],[640,480,'notes'],[390,844,'notes'],[1280,800,'chatbot'],[640,480,'chatbot'],[390,844,'chatbot']]){
       const file=path.join(folder,`${view}-${width}x${height}.html`),screenshot=file.replace('.html','.png');
       const activate=view==='today'?`document.getElementById('todolist-nav-link').click();`:view==='form'?`document.getElementById('quick-add-btn').click();document.getElementById('task-text-input').value='Lập kế hoạch tuần';document.getElementById('task-repeat-input').value='weekly';document.getElementById('task-repeat-input').dispatchEvent(new Event('change'));`:view==='project'?`document.querySelectorAll('.project-item')[1].click();`:view==='appearance'?`document.getElementById('open-appearance-btn').click();`:view==='hust'?`document.getElementById('open-hust-btn').click();`:view==='hust-calendar'?`document.getElementById('hust-calendar-nav-link').click();`:view==='notes'?`document.getElementById('notes-nav-link').click();`:'';
       const previewStorage={...report.storage};
@@ -381,7 +423,8 @@ else{
         previewStorage.planner_data_v2=JSON.stringify(schoolData);
       }
       const seedPhoto=`const wait=async(condition)=>{for(let i=0;i<200;i++){if(condition())return;await new Promise(r=>setTimeout(r,20));}throw new Error('Preview timed out');};await wait(()=>document.body.dataset.appearanceReady==='true');document.getElementById('open-appearance-btn').click();await wait(()=>document.getElementById('appearance-dialog').open);const bytes=Uint8Array.from(atob(${JSON.stringify(report.photoFixture.split(',')[1])}),c=>c.charCodeAt(0));const transfer=new frame.contentWindow.DataTransfer();transfer.items.add(new frame.contentWindow.File([bytes],'Nền thử nghiệm.png',{type:'image/png'}));document.getElementById('background-file-input').files=transfer.files;document.getElementById('background-file-input').dispatchEvent(new Event('change'));await wait(()=>!document.getElementById('choose-background-btn').disabled&&document.body.classList.contains('has-background'));document.getElementById('save-background-btn').click();await wait(()=>!document.getElementById('appearance-dialog').open);`;
-      const previewScript=`window.__storage=${JSON.stringify(previewStorage)};window.__errors=[];const frame=document.createElement('iframe');frame.style.cssText='border:0;display:block;width:${width}px;height:${height}px';let started=false;frame.onload=async()=>{if(started||!frame.contentDocument.getElementById('open-appearance-btn'))return;started=true;const document=frame.contentDocument;const Event=frame.contentWindow.Event;${seedPhoto}document.getElementById('dismiss-reminder').click();${activate}window.__previewReady=true;};frame.srcdoc=${JSON.stringify(html)};document.body.append(frame);`;
+      const chatActivate=view==='chatbot'?`document.getElementById('cb-launcher').click();document.getElementById('cb-input').value='Tóm tắt lịch tuần này';document.getElementById('cb-form').requestSubmit();await wait(()=>!document.getElementById('cb-send').disabled);`:'';
+      const previewScript=`window.__storage=${JSON.stringify(previewStorage)};window.__errors=[];const frame=document.createElement('iframe');frame.style.cssText='border:0;display:block;width:${width}px;height:${height}px';let started=false;frame.onload=async()=>{if(started||!frame.contentDocument.getElementById('open-appearance-btn'))return;started=true;const document=frame.contentDocument;const Event=frame.contentWindow.Event;${seedPhoto}document.getElementById('dismiss-reminder').click();${activate}${chatActivate}window.__previewReady=true;};frame.srcdoc=${JSON.stringify(html)};document.body.append(frame);`;
       const standalone='<!doctype html><meta charset="utf-8"><body style="margin:0;overflow:hidden"><script>'+previewScript.replaceAll('</script>','<\\/script>')+'</script></body>';
       fs.writeFileSync(file,standalone);
       jobs.push({file,screenshot,width,height});

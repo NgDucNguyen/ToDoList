@@ -26,10 +26,10 @@ if (!process.versions.electron) {
     </script>`;
     const portalSession = session.fromPartition(PARTITION);
     await portalSession.protocol.handle('https', () => new Response(fixture, { headers: { 'content-type': 'text/html; charset=utf-8' } }));
-    const main = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: true, contextIsolation: false } });
+    const main = new BrowserWindow({ show: false, webPreferences: { preload: path.join(__dirname, '..', 'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true } });
     const connector = createHustConnector(app, () => main); connector.register(ipcMain);
     await main.loadFile(path.join(__dirname, '..', 'index.html'));
-    const result = await main.webContents.executeJavaScript(`require('electron').ipcRenderer.invoke('hust:read')`);
+    const result = await main.webContents.executeJavaScript(`window.plannerDesktop.hust.read()`);
     assert.equal(result.events.length, 1); assert.equal(result.events[0].date, '2026-11-18');
     assert.match(result.account, /^[a-f0-9]{24}$/); assert.equal(result.identity, undefined);
     assert(!JSON.stringify(result).includes('NEVER EXPORT'));
@@ -38,7 +38,7 @@ if (!process.versions.electron) {
     assert.equal(preferences.nodeIntegration, false); assert.equal(preferences.contextIsolation, true); assert.equal(preferences.sandbox, true);
     assert.equal(await portal.webContents.executeJavaScript(`typeof require`), 'undefined');
     const raw = await main.webContents.executeJavaScript(`localStorage.getItem(PlannerStore.DATA_KEY)`);
-    const backup = await main.webContents.executeJavaScript(`require('electron').ipcRenderer.invoke('hust:backup', ${JSON.stringify(raw)})`);
+    const backup = await main.webContents.executeJavaScript(`window.plannerDesktop.hust.backup(${JSON.stringify(raw)})`);
     assert.equal(fs.readFileSync(path.join(profile, 'backups', backup), 'utf8'), raw);
     const rogue = new BrowserWindow({ show: false, webPreferences: { nodeIntegration: true, contextIsolation: false } });
     await rogue.loadFile(path.join(__dirname, '..', 'index.html'));
@@ -56,7 +56,7 @@ if (!process.versions.electron) {
     const blocked = new Promise(resolve => popup.webContents.once('will-navigate', event => resolve(event.defaultPrevented)));
     await popup.webContents.executeJavaScript(`location.href='https://evil.invalid/fixture'`);
     assert(await blocked); assert.equal(popup.webContents.getURL(), 'https://sso.hust.edu.vn/fixture');
-    await main.webContents.executeJavaScript(`require('electron').ipcRenderer.invoke('hust:disconnect')`);
+    await main.webContents.executeJavaScript(`window.plannerDesktop.hust.disconnect()`);
     assert(popup.isDestroyed()); assert(portal.isDestroyed());
     console.log('PASS: actual HUST connector, sandboxed portal, blank SSO popup, blocked external navigation, account hashing, IPC sender checks and disk backup.');
     console.log('Isolated profile: ' + profile); app.quit();

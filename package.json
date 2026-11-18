@@ -5,10 +5,12 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/planner-store.test.cjs tests/hust-sync.test.cjs tests/notes-store.test.cjs",
+    "test": "node --test tests/planner-store.test.cjs tests/hust-sync.test.cjs tests/notes-store.test.cjs tests/chatbot.test.cjs",
     "test:ui": "node scripts/check-ui.cjs",
     "test:electron": "node scripts/check-electron.cjs",
     "test:hust": "node scripts/check-hust-electron.cjs",
+    "train:chatbot": "node scripts/train-chatbot.cjs",
+    "prebuild-exe": "node scripts/train-chatbot.cjs",
     "build-exe": "node scripts/build-exe.cjs"
   },
   "repository": {
