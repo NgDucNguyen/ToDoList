@@ -332,17 +332,19 @@
     scrollPositions.forEach(({ element, top, left }) => { element.scrollTop = top; element.scrollLeft = left; });
   }
   function showView(view) {
+    if (activeView === "notes") window.PlannerNotes?.flush?.();
     activeView = view;
     if (window.matchMedia("(max-width: 600px)").matches) setSidebarToolsOpen(false);
     $("calendar-view").classList.toggle("hidden", view !== "calendar");
     $("hust-calendar-view").classList.toggle("hidden", view !== "hust");
     $("kanban-view").classList.toggle("hidden", view !== "project");
     $("todolist-view").classList.toggle("hidden", view !== "todo");
-    for (const [elementId, target] of [["calendar-nav-link", "calendar"], ["hust-calendar-nav-link", "hust"], ["todolist-nav-link", "todo"]]) {
+    $("notes-view").classList.toggle("hidden", view !== "notes");
+    for (const [elementId, target] of [["calendar-nav-link", "calendar"], ["hust-calendar-nav-link", "hust"], ["todolist-nav-link", "todo"], ["notes-nav-link", "notes"]]) {
       $(elementId).classList.toggle("active", view === target);
       if (view === target) $(elementId).setAttribute("aria-current", "page"); else $(elementId).removeAttribute("aria-current");
     }
-    document.querySelectorAll(".tag-filter-btn, #advanced-filters input, #advanced-filters select, #advanced-filters button").forEach(element => { element.disabled = view === "hust"; });
+    document.querySelectorAll(".tag-filter-btn, #advanced-filters input, #advanced-filters select, #advanced-filters button").forEach(element => { element.disabled = view === "hust" || view === "notes"; });
     renderAll();
   }
   function setSidebarToolsOpen(open) {
@@ -522,6 +524,7 @@
   $("confirm-ok-btn").addEventListener("click", () => { if (!confirmAction) return; const action = confirmAction; confirmAction = null; closeModal("confirm-modal"); safely(action); });
   $("calendar-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("calendar"); });
   $("hust-calendar-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("hust"); });
+  $("notes-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("notes"); });
   $("sidebar-tools-toggle").addEventListener("click", () => setSidebarToolsOpen($("sidebar-tools-toggle").getAttribute("aria-expanded") !== "true"));
   $("todolist-nav-link").addEventListener("click", (event) => { event.preventDefault(); showView("todo"); });
   document.querySelector(".brand-title").addEventListener("click", () => { viewDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1); showView("calendar"); });
@@ -624,5 +627,6 @@
   });
   renderAll();
   window.PlannerHustUI?.init({ getStore: () => store, renderAll, notice });
+  window.PlannerNotes?.init({ notice, confirmDelete });
   checkReminders();
 })();

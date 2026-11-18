@@ -48,6 +48,14 @@ Hỗ trợ JPG, PNG, WebP tối đa 20 MB. Ảnh được tối ưu đến cạn
 
 Mã chính: `planner-store.js` (dữ liệu và lặp lại), `app.js` (giao diện), `lunar.js` (âm lịch), `main.js` (cửa sổ Electron).
 
+## Ghi chú
+
+Mở **Ghi chú** trên thanh bên → **Ghi chú mới** để viết văn bản thuần như Notepad. Mỗi ghi chú có tiêu đề và nội dung riêng; ô tìm kiếm tìm cả hai. App tự lưu sau khi ngừng gõ 250 ms, khi chuyển trang và trước khi đóng. Có thể bấm **Lưu** hoặc **Ctrl+S** để lưu ngay. Trạng thái **Đã lưu trên máy** chỉ hiện khi ghi thành công; nếu lỗi bộ nhớ, nội dung đang sửa được giữ trong ô soạn thảo để thử lại hoặc xuất TXT.
+
+**Xuất TXT** lưu nội dung đang mở thành file UTF-8, giữ tiếng Việt, xuống dòng và khoảng trắng. **Xóa** cần xác nhận và lưu bản dữ liệu trước lần xóa gần nhất tại `planner_notes_before_delete_v1`. Các ghi chú dùng khóa `planner_notes_v1` riêng, không thay đổi công việc hay lịch học. Khi sao lưu đầy đủ, copy toàn bộ `%APPDATA%\todolist` để giữ cả ghi chú và ảnh nền; các bản sao JSON công việc trước khi đồng bộ HUST chỉ chứa dữ liệu công việc.
+
+Mã liên quan: `notes-store.js` (lưu dữ liệu), `notes.js` (soạn thảo và tự lưu).
+
 ## Đồng bộ lịch học HUST
 
 Thanh bên có hai trang lịch riêng: **Lịch** dành cho công việc cá nhân, **Lịch HUST** dành cho buổi học. Hai lịch có khung tháng và nút chuyển tháng độc lập. **Công việc** và Kanban hiển thị việc cá nhân. Trong hộp thêm/sửa, mục **Lưu vào lịch** cho phép chuyển việc tự thêm giữa hai lịch.

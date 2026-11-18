@@ -28,6 +28,9 @@
             <a href="#" class="nav-link" id="todolist-nav-link">
               <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="m7 12 3 3 7-7"/></svg></span> Công việc
             </a>
+            <a href="#" class="nav-link" id="notes-nav-link">
+              <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></span> Ghi chú
+            </a>
           </nav>
 
           <button id="sidebar-tools-toggle" class="sidebar-tools-toggle" type="button" aria-controls="sidebar-tools" aria-expanded="false">
@@ -152,6 +155,22 @@
             <div id="hust-calendar-grid" class="calendar-grid"></div>
           </div>
         </div>
+
+        <section id="notes-view" class="hidden" aria-labelledby="notes-heading">
+          <header class="notes-header"><div><h2 id="notes-heading">Ghi chú <span id="notes-count" class="notes-count">0</span></h2><p class="view-hint">Ghi nhanh ý tưởng, lưu lại điều cần nhớ.</p></div><button id="new-note-btn" type="button" class="btn-primary">+ Ghi chú mới</button></header>
+          <div class="notes-workspace">
+            <aside class="notes-browser" aria-label="Danh sách ghi chú">
+              <input id="notes-search-input" type="search" placeholder="Tìm ghi chú..." aria-label="Tìm ghi chú" />
+              <div id="notes-list" class="notes-list"></div>
+            </aside>
+            <div class="note-editor">
+              <div class="note-editor-toolbar"><span id="note-save-status" role="status" aria-live="polite">Chọn hoặc tạo một ghi chú.</span><div class="note-editor-actions"><button id="save-note-btn" class="btn-outline" type="button" title="Lưu ghi chú (Ctrl+S)">Lưu</button><button id="export-note-btn" class="btn-outline" type="button" disabled>Xuất TXT</button><button id="delete-note-btn" class="btn-outline danger-text" type="button" disabled>Xóa</button></div></div>
+              <input id="note-title-input" class="note-title-input" type="text" maxlength="200" placeholder="Tiêu đề ghi chú" aria-label="Tiêu đề ghi chú" disabled />
+              <textarea id="note-body-input" class="note-body-input" placeholder="Viết điều bạn muốn ghi nhớ ở đây…" aria-label="Nội dung ghi chú" spellcheck="false" disabled></textarea>
+              <footer class="note-editor-footer"><span id="note-character-count">0 ký tự · 1 dòng</span><span>Tự động lưu · Ctrl+S để lưu ngay</span></footer>
+            </div>
+          </div>
+        </section>
 
         <!-- Khối 3 cột cho project(ẩn) -->
         <div id="kanban-view" class="hidden">
@@ -499,6 +518,8 @@
     <script src="planner-store.js"></script>
     <script src="lunar.js"></script>
     <script src="hust-ui.js"></script>
+    <script src="notes-store.js"></script>
+    <script src="notes.js"></script>
     <script src="app.js"></script>
     <script src="appearance.js"></script>
   </body>

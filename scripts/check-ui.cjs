@@ -10,7 +10,7 @@ const renderer = path.join(__dirname, 'render-checks.cjs');
 const runtimeEnv = { ...process.env };
 delete runtimeEnv.ELECTRON_RUN_AS_NODE;
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('<link rel="stylesheet" href="style.css" />', () => '<style>' + fs.readFileSync(path.join(root, 'style.css'), 'utf8') + '</style>');
-for (const name of ['planner-store.js', 'lunar.js', 'hust-ui.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
+for (const name of ['planner-store.js', 'lunar.js', 'hust-ui.js', 'notes-store.js', 'notes.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
 const initialize = `
 window.addEventListener('error',event=>parent.__errors.push(event.message));
 const RealDate=Date; window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:[RealDate.UTC(2026,10,11,5)]));}static now(){return RealDate.UTC(2026,10,11,5);}};
@@ -240,6 +240,37 @@ async function browserChecks(source, legacy) {
     results.push('Full HUST preview/import beyond 100 lessons, date range, local backup failure, safe import, reschedule preserving completion, expired session and disconnect');
     results.push('Separate personal/HUST calendars, independent months and search, manual school lessons, migration backup and calendar reassignment');
 
+    const tasksBeforeNotes=window.__storage.planner_data_v2;
+    click('#notes-nav-link');assert(!doc.querySelector('#notes-view').classList.contains('hidden'),'Notes page did not open');
+    click('#new-note-btn');value('#note-title-input','Ý tưởng <img src=x>');
+    const noteBody='  Ghi chú tiếng Việt\n\n\tGiữ nguyên khoảng trắng\nDòng cuối  ';
+    value('#note-body-input',noteBody);
+    await waitFor(()=>JSON.parse(window.__storage.planner_notes_v1||'{"notes":[]}').notes[0]?.body===noteBody,'Note did not autosave');
+    const firstNote=JSON.parse(window.__storage.planner_notes_v1).notes[0];
+    assert(!doc.querySelector('#notes-list img'),'Note title interpreted as HTML');
+    click('#new-note-btn');value('#note-title-input','Ghi nhanh');value('#note-body-input','Lưu ngay khi chuyển trang');calendar();
+    assert(JSON.parse(window.__storage.planner_notes_v1).notes.some(note=>note.body==='Lưu ngay khi chuyển trang'),'Leaving notes lost pending text');
+    doc=await load();click('#notes-nav-link');value('#notes-search-input','khoảng trắng');
+    assert(doc.querySelectorAll('.note-list-item').length===1&&doc.querySelector('.note-list-item').dataset.noteId===firstNote.id,'Notes search did not find body text');
+    click('.note-list-item');assert(doc.querySelector('#note-body-input').value===noteBody,'Note whitespace changed after reload');
+    value('#notes-search-input','');
+    const notesStorage=frame.contentWindow.localStorage,originalNotesSet=notesStorage.setItem.bind(notesStorage);
+    notesStorage.setItem=(key,text)=>{if(key==='planner_notes_v1')throw new frame.contentWindow.DOMException('Full','QuotaExceededError');originalNotesSet(key,text);};
+    value('#note-body-input',noteBody+'\nChưa lưu');click('#save-note-btn');
+    assert(doc.querySelector('#note-save-status').classList.contains('error'),'Failed note save was reported as saved');
+    click('#new-note-btn');assert(doc.querySelector('#note-body-input').value.endsWith('Chưa lưu'),'Failed save discarded draft when creating another note');
+    notesStorage.setItem=originalNotesSet;click('#save-note-btn');assert(!doc.querySelector('#note-save-status').classList.contains('error'),'Note save could not be retried');
+    const originalAnchorClick=frame.contentWindow.HTMLAnchorElement.prototype.click;
+    let exportedNote;
+    frame.contentWindow.HTMLAnchorElement.prototype.click=function(){if(this.download?.endsWith('.txt'))exportedNote=frame.contentWindow.fetch(this.href).then(response=>response.text());else originalAnchorClick.call(this);};
+    click('#export-note-btn');assert(exportedNote&&await exportedNote===noteBody+'\nChưa lưu','TXT export changed Unicode or whitespace');frame.contentWindow.HTMLAnchorElement.prototype.click=originalAnchorClick;
+    const notesBeforeDelete=window.__storage.planner_notes_v1;
+    click('#delete-note-btn');click('#confirm-cancel-btn');assert(window.__storage.planner_notes_v1===notesBeforeDelete,'Cancel deleted a note');
+    click('#delete-note-btn');click('#confirm-ok-btn');assert(JSON.parse(window.__storage.planner_notes_v1).notes.length===1,'Confirmed note deletion failed');
+    assert(window.__storage.planner_notes_before_delete_v1===notesBeforeDelete,'Note deletion did not back up original content');
+    assert(window.__storage.planner_data_v2===tasksBeforeNotes,'Notes changed calendar/task data');
+    results.push('Notes autosave/reload, Unicode and whitespace, search, TXT export, failed save retry, deletion backup and calendar isolation');
+
     const tasksBeforePhoto=window.__storage.planner_data_v2;
     await waitFor(()=>doc.body.dataset.appearanceReady==='true','Appearance did not initialize');
     const canvas=doc.createElement('canvas');canvas.width=3200;canvas.height=1800;
@@ -311,6 +342,8 @@ async function browserChecks(source, legacy) {
       const schoolHeader=[...doc.querySelector('#hust-calendar-view .weekdays-bar').children].map(el=>el.getBoundingClientRect());
       [...doc.querySelectorAll('#hust-calendar-grid .day-cell')].slice(0,7).forEach((el,i)=>{const r=el.getBoundingClientRect();assert(r.left>=-1&&r.right<=width+1,'HUST calendar column clipped');assert(Math.abs(r.left-schoolHeader[i].left)<2,'HUST calendar header misaligned');});
       click('#hust-add-lesson-btn');noOverflow('#task-modal .modal-card');assert(doc.querySelector('#task-calendar-input').value==='hust','School add button lost calendar context');click('#cancel-task-btn');calendar();
+      click('#notes-nav-link');['body','.main-content','#notes-view','.notes-workspace','.note-editor','.note-editor-toolbar'].forEach(noOverflow);
+      const editorRect=doc.querySelector('#note-body-input').getBoundingClientRect();assert(editorRect.width>100&&editorRect.height>=70,'Notes editor became unusable at '+width+'x'+height);calendar();
       await openAppearance();noOverflow('#appearance-dialog');const appearanceRect=doc.querySelector('#appearance-dialog').getBoundingClientRect();assert(appearanceRect.left>=-1&&appearanceRect.right<=width+1&&appearanceRect.top>=-1&&appearanceRect.bottom<=height+1,'Background dialog clipped');click('#cancel-appearance-btn');
       results.push(`Layout ${width}x${height}`);
     }
@@ -334,10 +367,14 @@ else{
   if(report.failures.length) process.exitCode=1;
   if(!report.failures.length&&process.argv.includes('--screenshots')){
     const jobs=[];
-    for(const [width,height,view] of [[1280,800,'calendar'],[900,600,'today'],[640,480,'calendar'],[390,844,'today'],[1280,800,'form'],[1280,800,'project'],[1280,800,'appearance'],[1280,800,'hust'],[390,844,'hust'],[1280,800,'hust-calendar'],[640,480,'hust-calendar'],[390,844,'hust-calendar']]){
+    for(const [width,height,view] of [[1280,800,'calendar'],[900,600,'today'],[640,480,'calendar'],[390,844,'today'],[1280,800,'form'],[1280,800,'project'],[1280,800,'appearance'],[1280,800,'hust'],[390,844,'hust'],[1280,800,'hust-calendar'],[640,480,'hust-calendar'],[390,844,'hust-calendar'],[1280,800,'notes'],[640,480,'notes'],[390,844,'notes']]){
       const file=path.join(folder,`${view}-${width}x${height}.html`),screenshot=file.replace('.html','.png');
-      const activate=view==='today'?`document.getElementById('todolist-nav-link').click();`:view==='form'?`document.getElementById('quick-add-btn').click();document.getElementById('task-text-input').value='Lập kế hoạch tuần';document.getElementById('task-repeat-input').value='weekly';document.getElementById('task-repeat-input').dispatchEvent(new Event('change'));`:view==='project'?`document.querySelectorAll('.project-item')[1].click();`:view==='appearance'?`document.getElementById('open-appearance-btn').click();`:view==='hust'?`document.getElementById('open-hust-btn').click();`:view==='hust-calendar'?`document.getElementById('hust-calendar-nav-link').click();`:'';
+      const activate=view==='today'?`document.getElementById('todolist-nav-link').click();`:view==='form'?`document.getElementById('quick-add-btn').click();document.getElementById('task-text-input').value='Lập kế hoạch tuần';document.getElementById('task-repeat-input').value='weekly';document.getElementById('task-repeat-input').dispatchEvent(new Event('change'));`:view==='project'?`document.querySelectorAll('.project-item')[1].click();`:view==='appearance'?`document.getElementById('open-appearance-btn').click();`:view==='hust'?`document.getElementById('open-hust-btn').click();`:view==='hust-calendar'?`document.getElementById('hust-calendar-nav-link').click();`:view==='notes'?`document.getElementById('notes-nav-link').click();`:'';
       const previewStorage={...report.storage};
+      if(view==='notes') previewStorage.planner_notes_v1=JSON.stringify({version:1,notes:[
+        {id:'note-preview-1',title:'Ý tưởng cho tuần mới',body:'Mỗi ngày một chút tiến bộ.\n\nCẦN GHI NHỚ\n• Hoàn thiện báo cáo dự án\n• Chuẩn bị nội dung buổi họp nhóm\n• Dành 30 phút đọc sách\n\nÝ tưởng mới\nGhi lại ngay khi nghĩ ra, sắp xếp lại sau.',created_at:'2026-11-18T00:00:00Z',updated_at:'2026-11-18T00:15:00Z'},
+        {id:'note-preview-2',title:'Ghi nhanh sau buổi họp',body:'Các ý chính và bước tiếp theo của nhóm.',created_at:'2026-11-17T00:00:00Z',updated_at:'2026-11-17T02:30:00Z'}
+      ]});
       if(view==='hust-calendar'){
         const schoolData=JSON.parse(previewStorage.planner_data_v2);
         [['Đại số','2026-11-09','15:05','17:30','D3-301'],['Công nghệ phần mềm','2026-11-10','06:45','10:05','D9-201'],['Khoa học dữ liệu','2026-11-11','15:05','17:30','TC-301'],['Học máy','2026-11-12','06:45','10:05','D9-101'],['Học bù tự thêm','2026-11-11','18:00','20:30','Online'],['Thuật toán ứng dụng','2026-11-13','12:30','14:00','D5-101']].forEach(([title,task_date,time,end_time,location],index)=>schoolData.tasks.push({id:'school-preview-'+index,title,task_date,time,end_time,location,tag:'Study',calendar_id:'hust',...(index===4?{}:{source:{provider:'hust',term:'20261',class_id:'12345'+index}})}));

@@ -841,6 +841,7 @@ select:focus {
 
 #calendar-view,
 #hust-calendar-view,
+#notes-view,
 #kanban-view {
   display: flex;
   flex-direction: column;
@@ -1986,7 +1987,7 @@ input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 button:active { transform: translateY(1px); }
 button:focus-visible, a:focus-visible { outline-color: #8993de; }
 .modal-backdrop:not(.hidden) .modal-card { animation: modal-reveal 180ms ease-out both; }
-#calendar-view:not(.hidden), #hust-calendar-view:not(.hidden), #kanban-view:not(.hidden), #todolist-view:not(.hidden) { animation: view-reveal 160ms ease-out both; }
+#calendar-view:not(.hidden), #hust-calendar-view:not(.hidden), #notes-view:not(.hidden), #kanban-view:not(.hidden), #todolist-view:not(.hidden) { animation: view-reveal 160ms ease-out both; }
 @keyframes modal-reveal { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes view-reveal { from { opacity: 0.5; } to { opacity: 1; } }
 @media (max-width: 700px) {
@@ -2090,6 +2091,51 @@ body.has-background .planner-task-card.completed { background: rgb(248 250 255 /
 body.has-background .view-progress { background: rgb(249 250 255 / 82%); border-color: rgb(255 255 255 / 65%); }
 
 .sidebar-tools-toggle { display: none; }
+.notes-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; flex-shrink: 0; }
+.notes-header h2 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+.notes-header .view-hint { margin-top: 5px; }
+.notes-count { font-size: 0.75rem; font-weight: 500; background: var(--accent-soft); color: #5864b6; border-radius: 99px; padding: 4px 9px; }
+.notes-workspace { display: grid; grid-template-columns: minmax(180px, 245px) minmax(0, 1fr); flex: 1; min-height: 0; min-width: 0; border: 1px solid var(--border-subtle); border-radius: 14px; background: rgb(255 255 255 / 94%); overflow: hidden; }
+.notes-browser { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 14px 10px; border-right: 1px solid var(--border-subtle); background: rgb(245 247 252 / 85%); }
+.notes-browser > input { width: 100%; min-width: 0; font-size: 0.8rem; margin-bottom: 12px; }
+.notes-list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+.note-list-item { flex-shrink: 0; width: 100%; min-width: 0; border: 1px solid transparent; border-radius: 9px; padding: 11px; background: transparent; text-align: left; cursor: pointer; color: var(--text-primary); }
+.note-list-item:hover { background: #eef1f9; }
+.note-list-item.active { background: #e9ecfc; border-color: #d6dcfa; }
+.note-list-item strong, .note-list-item span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.note-list-item strong { font-size: 0.85rem; margin-bottom: 5px; }
+.note-list-item span { font-size: 0.76rem; color: var(--text-muted); }
+.note-list-item small { display: block; color: #9099ad; font-size: 0.65rem; margin-top: 8px; }
+.notes-list-empty { padding: 14px 10px; color: var(--text-muted); font-size: 0.8rem; line-height: 1.6; }
+.note-editor { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.note-editor-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 18px; border-bottom: 1px solid #edf0f7; }
+#note-save-status { font-size: 0.71rem; color: #6d7990; overflow-wrap: anywhere; }
+#note-save-status.error { color: #b24658; }
+.note-editor-actions { display: flex; gap: 6px; margin-left: auto; }
+.note-editor-actions button { padding: 6px 9px; font-size: 0.73rem; }
+.note-editor input.note-title-input { width: 100%; min-width: 0; border: 0; border-radius: 0; padding: 22px 24px 12px; font-size: 1.25rem; font-weight: 650; background: transparent; box-shadow: none; }
+.note-editor textarea.note-body-input { flex: 1; width: 100%; min-width: 0; min-height: 100px; resize: none; border: 0; border-radius: 0; padding: 8px 24px 24px; background: transparent; box-shadow: none; font: 0.88rem/1.85 Consolas, 'Cascadia Code', monospace; tab-size: 4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-editor input:focus, .note-editor textarea:focus { outline: 2px solid #b9c2f0; outline-offset: -2px; }
+.note-editor-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; padding: 9px 18px; border-top: 1px solid #edf0f7; color: var(--text-muted); font-size: 0.66rem; }
+@media (max-width: 900px) {
+  .notes-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: 130px minmax(0, 1fr); }
+  .notes-browser { padding: 9px 12px; border-right: 0; border-bottom: 1px solid var(--border-subtle); }
+  .notes-browser > input { margin-bottom: 7px; }
+  .notes-list { flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+  .note-list-item { width: 175px; padding: 7px 9px; }
+  .note-list-item small { display: none; }
+  .note-editor input.note-title-input { padding: 13px 15px 7px; font-size: 1.05rem; }
+  .note-editor textarea.note-body-input { padding: 7px 15px 15px; }
+  .note-editor-toolbar { padding: 9px 12px; }
+}
+@media (max-width: 600px) {
+  .nav-manu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .notes-header { margin-bottom: 12px; }
+  .notes-header h2 { font-size: 1.15rem; }
+  .notes-header .view-hint { display: none; }
+  .notes-header > button { padding: 9px 11px; }
+  .note-editor-footer span:last-child { display: none; }
+}
 .appearance-actions { display: flex; flex-direction: column; gap: 8px; }
 .hust-dialog { width: min(780px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); margin: auto; overflow-y: auto; color: var(--text-primary); }
 .calendar-kicker { margin: 0 0 5px; color: #6670b1; font-size: 0.72rem; font-weight: 600; }

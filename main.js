@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification } = require("electron");
+const { app, BrowserWindow, ipcMain, Notification, dialog } = require("electron");
 const path = require("path");
 const { createHustConnector } = require("./hust-connector");
 let mainWindow = null;
@@ -26,6 +26,14 @@ function createWindow() {
     },
   });
   mainWindow = win;
+  win.webContents.on("will-prevent-unload", (event) => {
+    const choice = dialog.showMessageBoxSync(win, {
+      type: "warning", title: "Ghi chú chưa lưu", message: "Chưa lưu được nội dung ghi chú đang sửa.",
+      detail: "Chọn Quay lại để lưu hoặc xuất TXT. Đóng mà không lưu sẽ bỏ các thay đổi chưa lưu.",
+      buttons: ["Quay lại", "Đóng mà không lưu"], defaultId: 0, cancelId: 0, noLink: true,
+    });
+    if (choice === 1) event.preventDefault();
+  });
   win.on("closed", () => { mainWindow = null; hustConnector.close(); });
 
   // Tải trực tiếp giao diện ứng dụng

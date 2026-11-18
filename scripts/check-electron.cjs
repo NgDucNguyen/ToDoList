@@ -40,7 +40,17 @@ if (!process.versions.electron) {
     window.webContents.reload(); await backgroundReload;
     const backgroundSaved = await window.webContents.executeJavaScript(`new Promise(resolve=>{ const check=()=>{if(document.body.dataset.appearanceReady==='true')resolve(document.body.classList.contains('has-background'));else setTimeout(check,20);};check();})`);
     if (!backgroundSaved) throw new Error('Background photo did not persist in Electron.');
-    console.log('PASS: actual Electron renderer, migration, persistent reload, recurring tasks and saved photo background.');
+    await window.webContents.executeJavaScript(`(() => {
+      document.getElementById('notes-nav-link').click();document.getElementById('new-note-btn').click();
+      document.getElementById('note-title-input').value='Ghi chú Electron';
+      const input=document.getElementById('note-body-input');input.value='Tiếng Việt\\n\\tGiữ khoảng trắng  ';input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`);
+    // Reload immediately while the debounce is pending: beforeunload must save.
+    const notesReload = new Promise(resolve => window.webContents.once('did-finish-load', resolve));
+    window.webContents.reload(); await notesReload;
+    const notesSaved = await window.webContents.executeJavaScript(`(() => {document.getElementById('notes-nav-link').click();return document.getElementById('note-body-input').value==='Tiếng Việt\\n\\tGiữ khoảng trắng  ';})()`);
+    if (!notesSaved) throw new Error('Pending notes did not persist through Electron reload.');
+    console.log('PASS: actual Electron renderer, migration, persistent reload, recurring tasks, photo background and notes flushed before reload.');
     console.log('Isolated profile: ' + profile);
     app.quit();
   }).catch(error => { console.error(error.stack || error); app.exit(1); });
