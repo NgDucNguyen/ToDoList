@@ -1,7 +1,18 @@
 node_modules/
 dist/
 .vscode/
-package-lock.json
 .env
 .env.*
 chatbot-config.json
+
+# Local editor settings, logs and temporary files
+.idea/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Never publish local application profiles or backups
+backups/
+profile-todolist/
+renderer-profile/

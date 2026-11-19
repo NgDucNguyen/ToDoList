@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const packager = require('electron-packager');
+const { includePath } = require('./distribution-files.cjs');
 
 async function build() {
   const root = path.resolve(__dirname, '..');
@@ -18,8 +19,8 @@ async function build() {
     out,
     icon: path.join(root, 'Calendar.ico'),
     overwrite: false,
-    // Exclude every previous release, including the new output directory.
-    ignore: [/^\/dist(?:\/|$)/, /^\/\.env(?:\.|$)/, /^\/chatbot-config\.json$/],
+    // Runtime dependencies are built into Electron; dev tools stay in the repo.
+    ignore: file => !includePath(file),
   });
   for (const release of releases) {
     console.log(`EXE: ${path.join(release, 'MyDailyPlanner.exe')}`);

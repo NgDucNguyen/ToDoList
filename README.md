@@ -1,102 +1,228 @@
-# My Daily Planner
+# Daily Planner
 
-Ứng dụng Electron lập kế hoạch cá nhân, dùng được trực tiếp bằng `index.html` trên trình duyệt.
+Ứng dụng lập kế hoạch cá nhân bằng **Electron + JavaScript**, gồm lịch, Kanban, ghi chú có định dạng và chatbot tiếng Việt chạy nội bộ. Dữ liệu lưu trên thiết bị; các chức năng lập kế hoạch không cần tài khoản hoặc API key.
 
-## Chạy và kiểm tra
+[Bản phát hành](https://github.com/NgDucNguyen/ToDoList/releases) · [Báo lỗi / đề xuất](https://github.com/NgDucNguyen/ToDoList/issues)
 
-- `npm start`: chạy bản desktop từ mã nguồn.
-- `npm test`: kiểm tra dữ liệu, chuyển đổi dữ liệu cũ và lịch lặp.
-- `npm run test:ui`: kiểm tra luồng sử dụng, ảnh nền và 8 kích thước cửa sổ bằng Chromium của Electron (tắt Node trong trang) với dữ liệu mẫu trong bộ nhớ và hồ sơ tạm riêng.
-- `node scripts/check-ui.cjs --screenshots`: kiểm tra và lưu ảnh mẫu trong thư mục tạm.
-- `npm run test:electron`: mở cửa sổ Electron ẩn với hồ sơ tạm để kiểm tra bản desktop. Không dùng hồ sơ dữ liệu cá nhân.
-- `npm run build-exe`: mỗi lần đóng gói vào thư mục mới `dist/build-<thời gian>-<mã>/MyDailyPlanner-win32-x64`, đường dẫn EXE được in trong Terminal. Không xóa hay ghi đè bản cũ, tránh lỗi `EBUSY` khi thư mục cũ đang mở. Đóng app cũ trước khi chạy bản mới. Dùng cả thư mục build, không tách riêng file `.exe`.
+## Tính năng
 
-Nếu PowerShell chặn `npm.ps1`, dùng `npm.cmd` thay cho `npm`.
+| Phần | Chức năng |
+| --- | --- |
+| Lịch cá nhân | Lịch tháng, âm lịch Việt Nam, thêm/sửa việc theo ngày/giờ, tìm kiếm và lọc nhãn. |
+| Công việc | Hôm nay, sắp tới, quá hạn, quan trọng, chưa lên lịch; ưu tiên, mô tả và checklist. |
+| Dự án / Kanban | Việc cần làm, Đang thực hiện, Hoàn thành; kéo thả hoặc đổi trạng thái bằng menu. |
+| Lịch lặp | Theo ngày, tuần, tháng; sửa một lần hoặc cả chuỗi; tiến độ từng lần độc lập. |
+| Mẫu và nhắc việc | Lưu mẫu công việc, nhắc trước giờ khi ứng dụng đang chạy. |
+| Ghi chú | Tự lưu, tìm kiếm, Ctrl+B, tiêu đề 1/2/3, checklist có ô tích và xuất TXT. |
+| Giao diện | Điều chỉnh theo cửa sổ; ảnh nền từ máy, chỉnh độ phủ sáng, làm mờ và vị trí. |
+| Chatbot nội bộ | Tra cứu/tóm tắt lịch và ghi chú; đề xuất tạo một việc hoặc ghi chú, có xác nhận. |
+| Lịch HUST | Trang lịch học riêng; desktop hỗ trợ nhập thời khóa biểu QLĐT sau khi đăng nhập. |
 
-## Năm tính năng mới
+Công việc cá nhân dùng chung dữ liệu giữa Lịch, Công việc và dự án. Xóa dự án giữ công việc và bỏ liên kết dự án.
 
-1. **Dự án ↔ Lịch ↔ To-Do:** cùng một công việc được cập nhật ở mọi màn hình. Chọn dự án và ngày trong hộp chi tiết để đưa việc lên lịch. Việc dự án cũ chưa có ngày vẫn nằm ở dự án và mục **Chưa lên lịch**.
-2. **Hôm nay / Sắp tới / Quá hạn:** Sắp tới gồm ngày mai đến hết 7 ngày tiếp theo. Quá hạn gồm việc chưa hoàn thành có ngày trước hôm nay. Có công tắc hiện/ẩn việc đã hoàn thành.
-3. **Ưu tiên / Quan trọng:** bốn mức Thấp, Bình thường, Cao, Khẩn cấp; dấu sao được lưu. Việc chưa hoàn thành được sắp theo ưu tiên, dấu sao rồi ngày và giờ. Mục Quan trọng hiển thị việc đơn được gắn sao ở mọi ngày, và các lần lặp đã qua hoặc trong 7 ngày tới.
-4. **Mô tả / Checklist:** bấm tên công việc để chỉnh ghi chú và các bước nhỏ. Tích checklist và lưu trong chi tiết; cũng có thể tích trực tiếp ở cửa sổ xem ngày. Các bước không tự hoàn thành cả công việc.
-5. **Lặp lại:** theo ngày, tuần (chọn thứ) hoặc tháng, có khoảng lặp và ngày kết thúc tùy chọn. Lặp ngày 31 sẽ dùng ngày cuối tháng ngắn hơn và quay về ngày 31 ở tháng sau. Mỗi lần có trạng thái và checklist riêng. Khi sửa/xóa, chọn **Chỉ lần này** hoặc **Cả chuỗi lặp lại**. Ngày bắt đầu chuỗi được giữ cố định; có thể dời từng lần. Để dừng lặp mà giữ lịch sử, đặt ngày kết thúc. Kanban hiển thị lần chưa hoàn thành có ngày gần nhất của mỗi chuỗi; các lần khác xem trên lịch.
+## Chọn cách sử dụng
 
-Xóa một dự án sẽ giữ lại công việc và bỏ liên kết dự án đó.
+| | Desktop Windows | Trình duyệt / GitHub Pages |
+| --- | --- | --- |
+| Lịch, Kanban, ghi chú, ảnh nền, chatbot | Có | Có |
+| Thêm buổi học thủ công ở Lịch HUST | Có | Có |
+| Đăng nhập và đồng bộ QLĐT HUST | Có | Không |
+| Nhắc việc | Trong app; thông báo Windows tùy hệ thống | Trong trang; thông báo tùy quyền trình duyệt |
+| Nơi lưu | Hồ sơ ứng dụng trên máy | Bộ nhớ trình duyệt tại địa chỉ đang mở |
+| Đồng bộ giữa máy/web/desktop | Không | Không |
 
-## Tính năng bổ sung
+Nhắc việc và tự cập nhật HUST cần app đang mở. Chưa có đồng bộ đám mây, tự cập nhật EXE hoặc bản đóng gói macOS/Linux được kiểm chứng.
 
-- Trong dự án, kéo nền thẻ hoặc dòng **Kéo sang cột khác** để đổi trạng thái. Có thể thả vào vùng trống, thẻ khác hoặc tiêu đề của cột; cột rỗng luôn có vùng nhận thả. Menu trạng thái trên thẻ vẫn dùng được khi không kéo thả.
-- Tích ô để chuyển việc sang **Hoàn thành**, bỏ tích để đưa về **Việc cần làm**. Vị trí cuộn được giữ khi cập nhật công việc. Mở lại biểu tượng Desktop sẽ đưa cửa sổ đang chạy lên trước, tránh hai cửa sổ cùng chỉnh hồ sơ dữ liệu.
-- Mở **Lọc nâng cao** ở thanh bên để kết hợp ưu tiên, trạng thái và khoảng ngày với bộ lọc nhãn và ô tìm kiếm. Nút **Xóa lọc nâng cao** chỉ đặt lại ba điều kiện này.
-- Trong hộp thêm/sửa công việc, chọn **Nhắc việc** sau khi nhập ngày và giờ. App kiểm tra mỗi 30 giây và nhắc khi thời điểm đến; khi mở app trong vòng 10 phút sau thời điểm nhắc, thông báo cũng xuất hiện. App cần đang chạy để nhắc đúng giờ. Lời nhắc trong app giữ nguyên cho tới khi bạn đóng. Thông báo Windows chỉ hoạt động khi hệ thống và shortcut của app hỗ trợ ([điều kiện của Electron](https://www.electronjs.org/docs/latest/tutorial/notifications)).
-- Trong hộp công việc, nhập tên mẫu và bấm **Lưu mẫu** để lưu nội dung đang điền. Khi tạo công việc mới, chọn mẫu và bấm **Dùng mẫu**. Ngày, ngày kết thúc lặp lại và tiến độ checklist không được chép sang công việc mới. Mẫu lưu trong `planner_templates_v1` cùng hồ sơ ứng dụng; sao lưu toàn bộ `%APPDATA%/todolist` sẽ giữ cả mẫu.
+## Dùng Windows, không cần Node.js
 
-## Ảnh nền cá nhân
+1. Vào [Releases](https://github.com/NgDucNguyen/ToDoList/releases), chọn bản có ZIP Windows x64. Nếu chưa có ZIP, chạy từ mã nguồn theo hướng dẫn bên dưới.
+2. Giải nén **toàn bộ** ZIP vào thư mục riêng.
+3. Chạy `MyDailyPlanner.exe`. Có thể tạo shortcut ra Desktop.
 
-Bấm **Ảnh nền** ở cuối thanh bên (biểu tượng ảnh ở góc trên trên màn hình nhỏ) → **Chọn ảnh từ máy** → chỉnh độ phủ sáng, độ mờ và vị trí → **Áp dụng**. Có thể xem trước trực tiếp; **Hủy** sẽ trả về nền đã lưu. Chọn **Nền mặc định** rồi **Áp dụng** để bỏ ảnh.
+Giữ các tệp/thư mục đi kèm; không kéo riêng EXE ra ngoài. Bản build là ứng dụng portable, chưa có bộ cài hoặc chữ ký phát hành. Nếu Windows cảnh báo, kiểm tra nguồn tải và nội dung cảnh báo trước khi chạy.
 
-Hỗ trợ JPG, PNG, WebP tối đa 20 MB. Ảnh được tối ưu đến cạnh dài tối đa 2560 px, lưu cục bộ trong IndexedDB `planner_appearance` của cùng hồ sơ ứng dụng. Không tải lên máy chủ và không chiếm dung lượng localStorage của công việc. Copy toàn bộ thư mục hồ sơ khi sao lưu để giữ cả ảnh nền. Bản web và desktop lưu ảnh riêng nhau.
+## Chạy từ mã nguồn
 
-## Dữ liệu và cập nhật
+Cần **Node.js 22.12 trở lên**, npm và Git. Desktop/build được kiểm tra trên Windows x64. Lần cài đầu cần Internet để tải các gói và Electron; các chức năng nội bộ sau đó không cần mạng.
 
-- Bản desktop giữ tên ứng dụng `todolist` và hồ sơ dữ liệu mặc định `%APPDATA%/todolist`.
-- Bản web và bản Electron có bộ nhớ riêng. Mở `index.html` trên web không tự lấy dữ liệu từ `.exe`.
-- Lần đầu mở bản mới, ứng dụng chuyển `planner_tasks`, `planner_projects`, `planner_kanban_tasks` vào mô hình dùng chung `planner_data_v2`.
-- Trước khi chuyển, lưu bản gốc tại `planner_backup_before_v2`. Các khóa dữ liệu cũ không bị xóa hay ghi đè. Nếu không đọc được dữ liệu hoặc không ghi được bản sao, ứng dụng dừng chuyển đổi và báo lỗi.
-- Bản `.exe` cũ không đọc định dạng mới. Đóng bản cũ trước khi chuyển sang bản mới; sau khi đã chuyển, tiếp tục dùng bản mới để tránh nhập thêm dữ liệu vào hai phiên bản riêng nhau.
-- Trước khi thay `.exe`, đóng ứng dụng và copy toàn bộ `%APPDATA%/todolist` ra nơi khác. Không commit thư mục dữ liệu cá nhân lên GitHub.
+```sh
+git clone https://github.com/NgDucNguyen/ToDoList.git
+cd ToDoList
+npm ci
+npm start
+```
 
-Mã chính: `planner-store.js` (dữ liệu và lặp lại), `app.js` (giao diện), `lunar.js` (âm lịch), `main.js` (cửa sổ Electron).
+`package-lock.json` được đưa vào Git để người dùng và CI cài cùng phiên bản thư viện. Nếu PowerShell chặn `npm.ps1`, dùng `npm.cmd`, ví dụ `npm.cmd ci` và `npm.cmd start`.
 
-## Ghi chú
+### Dùng thử trên web
 
-**Checklist trong ghi chú:** đặt con trỏ ở một dòng (hoặc chọn nhiều dòng), bấm **☑ Checklist** để chuyển thành các mục có ô tích. Bấm lại để về văn bản thường. **Enter** tạo mục mới chưa tích; Enter ở mục trống kết thúc checklist. Có thể tô đậm nội dung từng mục; trạng thái tích được tự lưu cùng ghi chú. Xuất TXT và chatbot đọc được trạng thái qua `[ ]` / `[x]`. Trước lần lưu checklist đầu tiên, app giữ nguyên dữ liệu ghi chú tại `planner_notes_before_checklist_v1`; nếu sao lưu thất bại thì không ghi đè bản cũ.
+Mở `index.html` bằng trình duyệt hiện đại để thử nhanh, không cần npm. Khi triển khai, xuất thư mục web riêng:
 
-Mở **Ghi chú** trên thanh bên → **Ghi chú mới** để soạn nội dung. Bôi đen chữ rồi bấm **Ctrl+B** hoặc nút **B** để bật/tắt chữ đậm; cũng có thể bật đậm trước khi gõ. Menu **Kiểu chữ** có Văn bản thường, Tiêu đề 1, Tiêu đề 2, Tiêu đề 3, áp dụng cho đoạn đang đặt con trỏ hoặc được chọn. Enter sau tiêu đề tạo đoạn văn thường; Shift+Enter xuống dòng trong cùng đoạn. Dán nội dung chỉ lấy văn bản để tránh chèn mã/trang web vào ghi chú.
+```sh
+npm run build:web
+```
 
-Mỗi ghi chú có tên và nội dung riêng; ô tìm kiếm tìm cả hai. App tự lưu cả định dạng sau khi ngừng gõ 250 ms, khi chuyển trang và trước khi đóng. Có thể bấm **Lưu** hoặc **Ctrl+S** để lưu ngay. Trạng thái **Đã lưu trên máy** chỉ hiện khi ghi thành công; nếu lỗi bộ nhớ, nội dung đang sửa được giữ để thử lại hoặc xuất TXT. Ghi chú cũ được mở nguyên văn, không diễn giải các ký tự như HTML. Lần đầu lưu ghi chú cũ với định dạng, app giữ nguyên bản dữ liệu trước đó tại `planner_notes_before_richtext_v1`; nếu không lưu được bản dự phòng thì chặn ghi thay vì mất bản cũ.
+Lệnh in đường dẫn `dist/web-<mã>/`. Phục vụ thư mục này bằng máy chủ tĩnh hoặc GitHub Pages. Trình duyệt cần cho phép localStorage và IndexedDB. `file://`, localhost và website triển khai có vùng lưu riêng; đổi trình duyệt, địa chỉ hoặc cổng không tự chuyển dữ liệu theo.
 
-**Xuất TXT** lưu văn bản UTF-8 đang mở, giữ tiếng Việt, xuống dòng và khoảng trắng; TXT không mang định dạng đậm/tiêu đề. **Xóa** cần xác nhận và lưu bản dữ liệu trước lần xóa gần nhất tại `planner_notes_before_delete_v1`. Ghi chú dùng khóa `planner_notes_v1` riêng: `body` là bản văn bản cho tìm kiếm/chatbot/TXT, `content` tùy chọn lưu cấu trúc đoạn và chữ đậm, không lưu HTML tùy ý. Không thay đổi công việc hay lịch học. Sao lưu đầy đủ bằng cách đóng app rồi copy toàn bộ `%APPDATA%\todolist` để giữ cả định dạng và ảnh nền; các bản sao JSON công việc trước khi đồng bộ HUST chỉ chứa dữ liệu công việc.
+## Hướng dẫn nhanh
 
-Mã liên quan: `notes-store.js` (lưu dữ liệu), `notes.js` (soạn thảo và tự lưu), `notes-richtext.js` (cấu trúc, hiển thị và trích xuất văn bản).
+### Công việc và lịch
 
-## Chatbot
+- Bấm **Thêm công việc** hoặc dấu **+** trong ô ngày. Chi tiết có ngày/giờ, dự án, ưu tiên, mô tả, checklist, lịch lặp và nhắc việc.
+- Tích để hoàn thành; bỏ tích đưa về Việc cần làm. Tích hết checklist không tự hoàn thành cả công việc.
+- **Sắp tới** gồm ngày mai đến hết 7 ngày tiếp theo; **Quá hạn** gồm việc chưa hoàn thành trước hôm nay.
+- Kết hợp tìm kiếm, nhãn và **Lọc nâng cao** theo ưu tiên/trạng thái/ngày. Kiểm tra bộ lọc nếu không thấy việc.
+- Khi sửa/xóa lịch lặp, chọn **Chỉ lần này** hoặc **Cả chuỗi lặp lại**. Lặp ngày 31 dùng ngày cuối ở tháng ngắn hơn. Đặt ngày kết thúc để dừng chuỗi và giữ lịch sử.
+- Kanban hiển thị lần chưa hoàn thành có ngày gần nhất của mỗi chuỗi; xem các lần khác trên lịch.
 
-Bấm avatar tròn ở góc dưới bên phải để mở **Chatbot nội bộ**. Chatbot không cần Internet, API key, dịch vụ AI hoặc tải model bên ngoài. Câu hỏi, lịch và ghi chú được xử lý ngay trong app, dùng được cả khi mở `index.html` trên trình duyệt và trong EXE. Riêng chức năng đồng bộ QLĐT HUST vẫn cần kết nối tới HUST như trước.
+### Ghi chú
 
-Mô hình nhận diện 14 nhóm yêu cầu được huấn luyện từ 275 câu mẫu tiếng Việt do project cung cấp, bằng đặc trưng từ/cụm từ/ký tự và hồi quy softmax. Model đóng gói trong `chatbot-model.js`. Đây là mô hình phân loại ý định chuyên cho Planner kết hợp bộ đọc ngày giờ và câu trả lời có kiểm soát, **không phải mô hình ngôn ngữ lớn được huấn luyện từ đầu**. Không tự lấy dữ liệu cá nhân làm mẫu huấn luyện và không cam kết hiểu mọi cách diễn đạt. Khi độ tin cậy thấp, bot yêu cầu nói rõ thay vì tự ghi dữ liệu.
+Mở **Ghi chú → Ghi chú mới**. Nội dung và định dạng tự lưu sau khi ngừng gõ; có **Lưu / Ctrl+S**. Chỉ coi đã lưu khi trạng thái hiện **Đã lưu trên máy**.
 
-Ví dụ: “Mai tôi học môn nào?”, “Tóm tắt lịch tuần này”, “Việc nào quá hạn?”, “Xem việc chưa lên lịch”, “Hôm nay làm xong những việc nào?”, “Tuần sau hôm nào ít việc nhất?”, “Kiểm tra trùng lịch ngày mai”, “Tìm ghi chú Ý tưởng”, “Cách sao lưu dữ liệu”. Các câu không dấu cũng được nhận diện. Lịch lặp được đọc theo từng lần; buổi HUST đã ẩn không được liệt kê. Bot chỉ thấy lịch đã có trong app, không tự đọc QLĐT và không suy ra toàn bộ lịch HUST đã đầy đủ.
+| Thao tác | Cách dùng |
+| --- | --- |
+| Chữ đậm | Chọn chữ rồi Ctrl+B hoặc nút B; có thể bật trước khi gõ. |
+| Tiêu đề | Kiểu chữ → Tiêu đề 1/2/3; Enter sau tiêu đề về đoạn thường. |
+| Checklist | Chọn dòng/nhiều dòng → ☑ Checklist; bấm lại để về văn bản thường. |
+| Thêm mục | Enter; Enter tại mục trống để kết thúc checklist. |
+| Xuất TXT | Giữ tiếng Việt, xuống dòng, `[ ]` / `[x]`; không giữ chữ đậm/tiêu đề. |
 
-Không cần chọn phạm vi ngày. Nếu câu hỏi nêu ngày, bot tự hiểu hôm nay/mai/ngày kia, thứ 2–CN, tuần này/sau, tháng này/sau, ngày/tháng[/năm] hoặc YYYY-MM-DD. Nếu không nêu ngày, tìm toàn bộ lịch/công việc đã lưu, gồm quá khứ, tương lai và việc chưa có ngày; không giới hạn mặc định 62 ngày/500 lịch. Kết quả dài chia 20 mục mỗi lượt, gõ “xem tiếp” để đọc tiếp. Chuỗi lặp hiển thị theo quy luật; hỏi ngày/tuần để xem từng lần, tránh đếm vô hạn chuỗi chưa có ngày kết thúc. Xem hoàn thành/chưa hoàn thành toàn bộ chỉ đếm việc đơn và trạng thái từng lần lặp đã ghi nhận riêng. Hỏi ngày ít lịch hoặc trùng giờ mà không nêu thời gian thì bot tự xem 7 ngày tới và ghi rõ mốc đó. So sánh ngày ít/bận dựa trên số lịch đã lưu, không khẳng định rảnh hoàn toàn; trùng giờ chỉ kết luận cho lịch đủ giờ bắt đầu/kết thúc.
+Dán chỉ lấy văn bản. Xóa cần xác nhận và giữ bản dự phòng trước lần xóa gần nhất. Nếu lưu lỗi, giữ cửa sổ đang sửa và xuất TXT trước khi đóng.
 
-Tạo công việc: “Thêm lịch đọc sách ngày mai 19h”, hoặc “Tạo lịch họp nhóm” rồi trả lời ngày/giờ khi bot hỏi. Giờ hỗ trợ HH:mm, 19h, 8h30, 7 giờ tối; nhập “cả ngày” để không đặt giờ. Tạo ghi chú: “Ghi chú: nội dung” hoặc “Tạo ghi chú Ý tưởng với nội dung: ...”. Bot giữ nội dung ghi chú và xuống dòng. Mỗi lần chỉ đề xuất một việc cá nhân hoặc một ghi chú, **Xác nhận tạo** mới ghi, **Bỏ qua** không ghi. Thiếu thông tin thì hỏi lại; gõ “hủy” bỏ yêu cầu đang điền. Không tự sửa/xóa, tạo HUST, nhiều công việc hay lịch lặp. “Nhắc tôi ...” tạo công việc; muốn thông báo Windows, mở chi tiết và chọn Nhắc việc.
+### Chatbot nội bộ
 
-Huấn luyện lại: thêm ví dụ vào đúng nhóm trong `chatbot-training.json`, giữ tập `evaluation` tách biệt, chạy `npm.cmd run train:chatbot` rồi `npm.cmd test`. Script huấn luyện có seed cố định, không dùng mạng hoặc dữ liệu lịch cá nhân; xuất trọng số và `chatbot-training-report.json`. Bản đầu nhận đúng 43/46 câu của tập kiểm tra cố định (93,48%); đây chỉ là điểm phân loại trên bộ ví dụ nhỏ, không phải độ chính xác chung của chatbot. Bộ kiểm tra ngày giờ, dữ liệu và thao tác chạy riêng. `npm.cmd run build-exe` tự huấn luyện lại trước khi đóng gói.
+Bấm avatar tròn ở góc dưới bên phải. Ví dụ:
 
-Cuộc trò chuyện và yêu cầu chưa xác nhận chỉ giữ trong phiên hiện tại. Lịch/ghi chú đã xác nhận lưu bình thường. Nếu có file cấu hình key từ bản cũ, bản nội bộ không đọc hay sử dụng file đó. HUST/reminder tiếp tục dùng preload cách ly; chatbot không dùng IPC mạng. Các kiểm tra giao diện/desktop sử dụng mô hình và câu trả lời nội bộ thật trong hồ sơ tạm, có chặn mạng để phát hiện yêu cầu ra ngoài.
+```text
+Hôm nay có lịch gì?
+Mai tôi học môn nào?
+Tóm tắt lịch tuần này
+Việc nào quá hạn?
+Tìm ghi chú Ý tưởng
+Thêm lịch đọc sách ngày mai 19h
+Ghi chú: nhớ mang laptop
+```
 
-Mã liên quan: `chatbot.js`/`chatbot.css` (giao diện), `chatbot-core.js` (đọc/lưu được kiểm tra), `chatbot-nlu.js` (đặc trưng/phân loại), `chatbot-local.js` (ngày giờ/hội thoại), `chatbot-knowledge.js` (kiến thức app), `scripts/train-chatbot.cjs` (huấn luyện). Avatar mặc định là SVG ViT, thay ảnh và cập nhật đường dẫn trong `index.html` nếu muốn.
+Không cần chọn phạm vi ngày. Câu có ngày/tuần/tháng dùng mốc đó; tra cứu không nêu ngày tìm toàn bộ dữ liệu. Kết quả dài chia 20 mục/lượt, gõ **xem tiếp**. Riêng tìm ngày ít lịch/kiểm tra trùng giờ không có mốc dùng 7 ngày tới và ghi rõ khoảng này.
 
-## Đồng bộ lịch học HUST
+Bot chỉ ghi khi bấm **Xác nhận tạo**; hỗ trợ một việc cá nhân hoặc một ghi chú mỗi lần. Chưa sửa/xóa qua hội thoại, tạo hàng loạt hoặc tạo chuỗi lặp. Bot chỉ biết lịch đã lưu trong app.
 
-Thanh bên có hai trang lịch riêng: **Lịch** dành cho công việc cá nhân, **Lịch HUST** dành cho buổi học. Hai lịch có khung tháng và nút chuyển tháng độc lập. **Công việc** và Kanban hiển thị việc cá nhân. Trong hộp thêm/sửa, mục **Lưu vào lịch** cho phép chuyển việc tự thêm giữa hai lịch.
+Đây là bộ phân loại 14 ý định kết hợp xử lý ngày giờ và câu trả lời có kiểm soát, **không phải mô hình ngôn ngữ lớn**. Không gọi AI ngoài, không cần key, không tự dùng dữ liệu cá nhân để huấn luyện. Lịch sử chat chỉ giữ trong phiên.
 
-Trong bản desktop, mở **Lịch HUST → Đồng bộ HUST**:
+### Lịch HUST — tùy chọn, chỉ desktop
 
-1. Bấm **Kết nối HUST**, tự đăng nhập ở cửa sổ QLĐT và chọn học kỳ có thời khóa biểu. Cửa sổ này dùng phiên riêng của app; đăng nhập sẵn trên Chrome không thay thế bước này.
-2. Quay lại Planner, bấm **Đọc lịch / cập nhật** để xem toàn bộ các buổi đã đọc, khoảng ngày đầu–cuối, giờ bắt đầu/kết thúc, phòng, số buổi thêm/cập nhật và cảnh báo môn chưa có lịch. Bảng xem trước không giới hạn ở 100 buổi đầu.
-3. Bấm **Áp dụng vào Lịch HUST**. App nhập từng buổi vào trang lịch học riêng, không tạo dự án HUST. Đọc lại cùng lịch không tạo bản trùng. Dùng **Thêm buổi học** hoặc dấu **+** trong ô ngày ở Lịch HUST để nhập lịch học bù thủ công; các buổi này không bị đồng bộ ghi đè.
-4. Sau lần áp dụng đầu tiên, có thể bật **Tự cập nhật mỗi 6 giờ khi app đang mở**. Tự động chỉ áp dụng cho tài khoản và học kỳ đã xác nhận; đổi tài khoản/học kỳ cần xem trước lại. Phiên hết hạn cần đăng nhập lại. App không cập nhật khi đang đóng.
+1. Mở **Lịch HUST → Đồng bộ HUST → Kết nối HUST**.
+2. Tự đăng nhập trong cửa sổ QLĐT của app, mở thời khóa biểu và chọn học kỳ. Phiên Chrome bên ngoài không thay thế phiên này.
+3. Quay lại Planner → **Đọc lịch / cập nhật**, kiểm tra bảng xem trước và khoảng ngày.
+4. Bấm **Áp dụng vào Lịch HUST**. Sau lần xác nhận đầu có thể bật cập nhật mỗi 6 giờ khi app mở.
 
-Đây là đồng bộ một chiều **HUST → Planner**, chỉ lấy **thời khóa biểu gốc**. App bỏ qua các thông báo nghỉ, đổi lịch và học bù; bạn tự thêm hoặc chỉnh những buổi này. Các buổi tự thêm không bị đồng bộ ghi đè. App giữ tiến độ hoàn thành, ghi chú, checklist và các trường tên/ngày/giờ bạn đã sửa riêng. Buổi không còn trong thời khóa biểu gốc sẽ được ẩn, không xóa dữ liệu gốc; nếu buổi đó xuất hiện lại thì phục hồi cùng công việc. Môn chưa được nhà trường xếp lịch chỉ được báo, không tự đoán ngày học.
+Đồng bộ một chiều **HUST → Planner**, chỉ lấy thời khóa biểu gốc. Thông báo nghỉ, đổi lịch, học bù không được áp dụng; tự thêm/chỉnh các buổi ngoại lệ. Buổi thêm thủ công và các trường sửa riêng được bảo toàn. Buổi không còn trong lịch gốc được ẩn thay vì xóa.
 
-Trước mỗi lần áp dụng, app ghi bản JSON dữ liệu công việc vào `%APPDATA%\todolist\backups\before-hust-*.json`. Nếu sao lưu thất bại thì không nhập lịch. Bản sao này không chứa ảnh nền; muốn giữ ảnh nền, sao lưu toàn bộ hồ sơ như hướng dẫn ở trên. App cũng giữ bản dữ liệu trước lần nhập đầu tiên tại khóa `planner_backup_before_hust`.
+App sao lưu công việc trước khi áp dụng; nếu sao lưu thất bại thì không nhập. Phiên đăng nhập lưu riêng trên máy; **Ngắt kết nối** xóa phiên và giữ lịch. Bộ đọc phụ thuộc cấu trúc QLĐT, có thể cần cập nhật khi cổng thay đổi. Dự án không phải sản phẩm chính thức của HUST.
 
-Khi mở bản có trang Lịch HUST lần đầu, app bỏ các dự án HUST tự tạo cũ và chuyển các buổi trong đó sang lịch học riêng. ID, ghi chú, checklist và tiến độ được giữ lại. Dữ liệu trước khi chuyển được lưu nguyên bản tại khóa `planner_backup_before_hust_calendar`; nếu không ghi được bản sao thì không chuyển. Dự án do bạn tự đặt tên không bị xóa theo tên.
+## Dữ liệu, sao lưu và cập nhật
 
-Cửa sổ HUST tắt Node và chạy sandbox, lưu phiên đăng nhập riêng tại partition `persist:planner-hust-qldt`. Bộ đọc chỉ trả thông tin thời khóa biểu và mã tài khoản đã băm; không lấy mật khẩu/cookie/token để đưa vào dữ liệu công việc. **Ngắt kết nối** xóa phiên HUST riêng và tắt tự cập nhật, giữ lịch đã nhập.
+### Desktop
 
-Bộ đọc hiện dựa trên cấu trúc trang thời khóa biểu HUST. Khi trang thay đổi hoặc tải thiếu dữ liệu, app dừng và báo lỗi thay vì ghi đè lịch. Thông báo học bù không tham gia quá trình đọc lịch. Bản mở `index.html` trên trình duyệt không có kết nối HUST.
+Dữ liệu mặc định ở **`%APPDATA%\todolist`** trên Windows, tách khỏi EXE: lịch, dự án, ghi chú, mẫu, ảnh nền và phiên HUST. Giữ `name: "todolist"` trong `package.json` khi cập nhật để không đổi hồ sơ mặc định.
 
-Mã liên quan: `hust-connector.js` (cửa sổ, phiên và IPC), `hust-extractor.js` (bộ đọc trang chính thức), `hust-ui.js` (xem trước/tự cập nhật), `planner-store.js` (nhập và bảo toàn dữ liệu). Chạy `npm run test:hust` để kiểm tra connector Electron với trang HTTPS giả lập và hồ sơ tạm; bài kiểm tra này không kết nối tài khoản thật.
+**Sao lưu đầy đủ:** đóng Planner và cửa sổ HUST → Win+R → nhập `%APPDATA%` → copy toàn bộ `todolist` ra nơi riêng. Bản sao có thể chứa phiên đăng nhập HUST, không đưa lên GitHub.
+
+**Cập nhật:** sao lưu → đóng bản cũ → giải nén bản mới vào thư mục khác → mở và kiểm tra lịch/ghi chú → cập nhật shortcut. Build lại thường giữ dữ liệu vì hồ sơ tách riêng, nhưng không thay thế sao lưu.
+
+**Khôi phục:** đóng app → giữ thêm bản sao hồ sơ hiện tại → chép bản đã sao lưu về `%APPDATA%\todolist`. Dùng app tương thích với bản sao; không mở đồng thời bản cũ và mới.
+
+`backups/before-hust-*.json` chỉ chứa công việc, không sao lưu đầy đủ ảnh nền, ghi chú hoặc phiên đăng nhập.
+
+### Web
+
+Mỗi trình duyệt/địa chỉ lưu riêng bằng localStorage và IndexedDB. Không đồng bộ giữa thiết bị. Xóa dữ liệu trang, dùng chế độ riêng tư hoặc đổi địa chỉ có thể mất khả năng truy cập dữ liệu cũ. TXT giữ từng ghi chú; hiện chưa có nút sao lưu/khôi phục toàn bộ dữ liệu web.
+
+### Tương thích dữ liệu cũ
+
+App chuyển dữ liệu cũ vào `planner_data_v2`, giữ khóa cũ và `planner_backup_before_v2`. Ghi chú dùng `planner_notes_v1`; có bản dự phòng trước khi thêm định dạng/checklist và trước lần xóa gần nhất. Dữ liệu không hợp lệ hoặc không sao lưu được sẽ báo lỗi thay vì tự xóa/tạo lại. Bản dự phòng nội bộ vẫn nằm trên cùng thiết bị, không thay thế bản sao riêng.
+
+## Kiểm tra và đóng gói
+
+```sh
+npm test
+npm run test:ui
+npm run test:electron
+npm run test:hust
+npm run build-exe
+```
+
+| Lệnh | Mục đích |
+| --- | --- |
+| `npm test` | Dữ liệu, lịch lặp, HUST, ghi chú, chatbot và file phát hành. |
+| `npm run test:ui` | Luồng sử dụng và 8 kích thước cửa sổ bằng Chromium/Electron. |
+| `node scripts/check-ui.cjs --screenshots` | Kiểm tra và lưu ảnh mẫu trong thư mục tạm. |
+| `npm run test:electron` | Preload cách ly, lưu dữ liệu, bàn phím và chatbot không dùng mạng. |
+| `npm run test:hust` | Connector với trang HTTPS giả lập, không đăng nhập thật. |
+| `npm run build:web` | Xuất các file web cần thiết vào thư mục mới dưới `dist/`. |
+| `npm run build-exe` | Huấn luyện chatbot rồi đóng gói Windows x64 vào thư mục mới. |
+
+Kiểm tra giao diện dùng dữ liệu mẫu và hồ sơ tạm riêng. Build không xóa/ghi đè bản cũ; Terminal in đường dẫn `dist/build-<thời gian>-<mã>/MyDailyPlanner-win32-x64/MyDailyPlanner.exe`.
+
+Huấn luyện chatbot: sửa `chatbot-training.json`, giữ tập `evaluation` độc lập → `npm run train:chatbot` → `npm test`. Model ở `chatbot-model.js`, báo cáo ở `chatbot-training-report.json`. Điểm trên bộ câu mẫu nhỏ không bảo đảm hiểu mọi câu tiếng Việt.
+
+## Triển khai và chia sẻ trên GitHub
+
+Ba workflow được chuẩn bị sẵn; sửa file ở máy chưa tự xuất bản website hoặc Release:
+
+| Workflow | Khi chạy | Kết quả |
+| --- | --- | --- |
+| Checks | Push main, pull request hoặc chạy tay | Cài bằng lockfile, kiểm tra và thử xuất web. |
+| Build Windows | Actions → Build Windows → Run workflow | Artifact ZIP `MyDailyPlanner-windows-x64`, giữ 14 ngày. |
+| Deploy Web | Actions → Deploy Web → Run workflow | Xuất bản web sau khi chủ repo bật GitHub Pages. |
+
+### Chia sẻ EXE qua Releases
+
+1. Đẩy mã đã kiểm tra và `package-lock.json` lên GitHub.
+2. Chạy **Build Windows**, tải ZIP trong **Artifacts** sau khi thành công (cần đăng nhập GitHub).
+3. **Releases → Draft a new release** → chọn tag phiên bản, viết thay đổi → tải ZIP lên **Assets** → Publish.
+4. Người dùng tải ZIP từ Releases và giải nén toàn bộ. Không đưa `node_modules/`, `dist/`, bản sao lưu hoặc hồ sơ cá nhân vào Git.
+
+### Bật GitHub Pages
+
+1. Repo → **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. **Actions → Deploy Web → Run workflow**, chọn nhánh muốn phát hành.
+3. Lấy URL ở kết quả deployment / Settings → Pages. Chạy lại workflow khi muốn cập nhật.
+
+Workflow chỉ tải file giao diện trong danh sách cho phép. Xem [hướng dẫn GitHub Pages chính thức](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages). Website chạy trong trình duyệt từng người; xuất bản website không đưa dữ liệu Planner cá nhân của bạn lên đó.
+
+## Cấu trúc mã nguồn
+
+| File / thư mục | Vai trò |
+| --- | --- |
+| `index.html`, `style.css`, `app.js` | Giao diện, lịch, công việc và Kanban. |
+| `planner-store.js`, `lunar.js` | Dữ liệu/lịch lặp/nhập HUST và âm lịch. |
+| `main.js`, `preload.js` | Cửa sổ Electron và cầu nối IPC giới hạn. |
+| `hust-connector.js`, `hust-extractor.js`, `hust-ui.js` | Đăng nhập, đọc thời khóa biểu, xem trước/đồng bộ. |
+| `notes.js`, `notes-store.js`, `notes-richtext.js` | Soạn thảo, lưu và định dạng/checklist. |
+| `appearance.js` | Xử lý ảnh nền và IndexedDB. |
+| `chatbot.js`, `chatbot.css`, `chatbot-core.js` | Giao diện, kiểm tra dữ liệu và tạo theo xác nhận. |
+| `chatbot-local.js`, `chatbot-nlu.js`, `chatbot-knowledge.js` | Hội thoại/ngày giờ, phân loại và kiến thức app. |
+| `chatbot-training.json`, `chatbot-model.js`, `chatbot-training-report.json` | Mẫu huấn luyện, trọng số offline, đánh giá. |
+| `assets/`, `Calendar.ico` | Avatar và biểu tượng. |
+| `scripts/`, `tests/`, `.github/workflows/` | Kiểm tra, huấn luyện, đóng gói, triển khai. |
+| `package.json`, `package-lock.json` | Lệnh chạy và phiên bản thư viện cố định. |
+| `dist/`, `node_modules/` | Đầu ra/thư viện cục bộ, được bỏ qua trong Git. |
+
+## Lỗi thường gặp
+
+| Hiện tượng | Kiểm tra |
+| --- | --- |
+| Thiếu Electron/module | Kiểm tra Node.js, chạy `npm ci` tại thư mục project. |
+| `npm.ps1` bị chặn | Dùng `npm.cmd` trên Windows. |
+| `ELECTRON_RUN_AS_NODE` khiến app không mở | PowerShell: `Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue`. |
+| Mở bản mới vẫn thấy giao diện cũ | Đóng app đang chạy, kiểm tra Target shortcut; app giữ một cửa sổ chính cho cùng hồ sơ. |
+| Web không có lịch EXE | Hai bản có bộ nhớ riêng, không tự đồng bộ. |
+| Không đọc được HUST | Kiểm tra đăng nhập, học kỳ/trang thời khóa biểu; gửi lỗi đã che thông tin cá nhân. |
+| Không lưu được / bộ nhớ đầy | Giữ cửa sổ đang sửa, xuất TXT nếu là ghi chú, sao lưu hồ sơ trước khi xử lý. |
+
+## Đóng góp và giấy phép
+
+Mở Issue nêu phiên bản, hệ điều hành, bước tái hiện và kết quả mong đợi. Không gửi mật khẩu, cookie, hồ sơ thật hoặc ảnh chứa thông tin nhạy cảm. Pull request cần chạy kiểm tra liên quan; thay đổi định dạng dữ liệu cần giữ tương thích và có đường sao lưu.
+
+Mã dự án dùng [ISC](LICENSE), theo khai báo trong `package.json`. Electron và các thư viện đi kèm giữ giấy phép riêng.

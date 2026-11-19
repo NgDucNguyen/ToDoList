@@ -1,11 +1,12 @@
 {
   "name": "todolist",
   "version": "1.0.0",
-  "description": "Desktop To-Do & Planner App",
+  "description": "Local-first daily planner with calendars, Kanban, rich notes and an offline Vietnamese assistant",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "test": "node --test tests/planner-store.test.cjs tests/hust-sync.test.cjs tests/notes-store.test.cjs tests/chatbot.test.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "build:web": "node scripts/prepare-web.cjs",
     "test:ui": "node scripts/check-ui.cjs",
     "test:electron": "node scripts/check-electron.cjs",
     "test:hust": "node scripts/check-hust-electron.cjs",
@@ -17,8 +18,8 @@
     "type": "git",
     "url": "git+https://github.com/NgDucNguyen/ToDoList.git"
   },
-  "keywords": [],
-  "author": "",
+  "engines": { "node": ">=22.12.0" },
+  "keywords": ["planner", "todo", "electron", "kanban", "notes", "offline"],
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/NgDucNguyen/ToDoList/issues"
