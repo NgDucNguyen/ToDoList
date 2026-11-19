@@ -166,8 +166,10 @@
             </aside>
             <div class="note-editor">
               <div class="note-editor-toolbar"><span id="note-save-status" role="status" aria-live="polite">Chọn hoặc tạo một ghi chú.</span><div class="note-editor-actions"><button id="save-note-btn" class="btn-outline" type="button" title="Lưu ghi chú (Ctrl+S)">Lưu</button><button id="export-note-btn" class="btn-outline" type="button" disabled>Xuất TXT</button><button id="delete-note-btn" class="btn-outline danger-text" type="button" disabled>Xóa</button></div></div>
+              <div class="note-format-toolbar" role="group" aria-label="Định dạng ghi chú"><label for="note-block-format">Kiểu chữ</label><select id="note-block-format" aria-label="Kiểu đoạn văn" disabled><option value="p">Văn bản thường</option><option value="h1">Tiêu đề 1</option><option value="h2">Tiêu đề 2</option><option value="h3">Tiêu đề 3</option></select><button id="note-bold-btn" type="button" aria-label="Chữ đậm (Ctrl+B)" aria-pressed="false" title="Chữ đậm (Ctrl+B)" disabled><strong>B</strong></button><span>Ctrl+B · Chữ đậm</span></div>
+              <div class="note-checklist-toolbar"><button id="note-checklist-btn" type="button" aria-pressed="false" title="Bật/tắt checklist cho dòng đang chọn" disabled>☑ Checklist</button><span>Enter: thêm mục · Enter ở mục trống: kết thúc</span></div>
               <input id="note-title-input" class="note-title-input" type="text" maxlength="200" placeholder="Tiêu đề ghi chú" aria-label="Tiêu đề ghi chú" disabled />
-              <textarea id="note-body-input" class="note-body-input" placeholder="Viết điều bạn muốn ghi nhớ ở đây…" aria-label="Nội dung ghi chú" spellcheck="false" disabled></textarea>
+              <div id="note-body-input" class="note-body-input" contenteditable="false" role="textbox" aria-multiline="true" aria-label="Nội dung ghi chú" aria-disabled="true" data-placeholder="Viết điều bạn muốn ghi nhớ ở đây…" spellcheck="false"></div>
               <footer class="note-editor-footer"><span id="note-character-count">0 ký tự · 1 dòng</span><span>Tự động lưu · Ctrl+S để lưu ngay</span></footer>
             </div>
           </div>
@@ -534,6 +536,7 @@
     <script src="planner-store.js"></script>
     <script src="lunar.js"></script>
     <script src="hust-ui.js"></script>
+    <script src="notes-richtext.js"></script>
     <script src="notes-store.js"></script>
     <script src="notes.js"></script>
     <script src="chatbot-core.js"></script>

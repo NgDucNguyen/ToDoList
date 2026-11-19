@@ -2114,8 +2114,30 @@ body.has-background .view-progress { background: rgb(249 250 255 / 82%); border-
 .note-editor-actions { display: flex; gap: 6px; margin-left: auto; }
 .note-editor-actions button { padding: 6px 9px; font-size: 0.73rem; }
 .note-editor input.note-title-input { width: 100%; min-width: 0; border: 0; border-radius: 0; padding: 22px 24px 12px; font-size: 1.25rem; font-weight: 650; background: transparent; box-shadow: none; }
-.note-editor textarea.note-body-input { flex: 1; width: 100%; min-width: 0; min-height: 100px; resize: none; border: 0; border-radius: 0; padding: 8px 24px 24px; background: transparent; box-shadow: none; font: 0.88rem/1.85 Consolas, 'Cascadia Code', monospace; tab-size: 4; white-space: pre-wrap; overflow-wrap: anywhere; }
-.note-editor input:focus, .note-editor textarea:focus { outline: 2px solid #b9c2f0; outline-offset: -2px; }
+.note-editor .note-body-input { position: relative; flex: 1; width: 100%; min-width: 0; min-height: 70px; overflow-y: auto; border: 0; border-radius: 0; padding: 8px 24px 24px; background: transparent; box-shadow: none; font-size: 0.9rem; line-height: 1.85; tab-size: 4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-body-input p { margin: 0; min-height: 1.85em; }
+.note-body-input h1 { font-size: 1.8rem; line-height: 1.4; margin: 14px 0 8px; font-weight: 750; }
+.note-body-input h2 { font-size: 1.4rem; line-height: 1.5; margin: 12px 0 6px; font-weight: 700; }
+.note-body-input h3 { font-size: 1.12rem; line-height: 1.5; margin: 10px 0 5px; font-weight: 650; }
+.note-body-input strong, .note-body-input b { font-weight: 750; }
+.note-checklist-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 0 24px 7px; }
+.note-checklist-toolbar span { font-size: .7rem; color: var(--text-muted); }
+#note-checklist-btn { border: 1px solid #dce2ef; border-radius: 6px; padding: 5px 9px; background: #fff; color: var(--text-primary); cursor: pointer; }
+#note-checklist-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+#note-checklist-btn:disabled { opacity: .4; cursor: default; }
+.note-body-input [data-note-check] { display: flex; align-items: baseline; gap: 9px; min-height: 1.85em; }
+.note-body-input [data-note-check] > input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; padding: 0; accent-color: var(--accent); cursor: pointer; }
+.note-body-input [data-check-text] { flex: 1; min-width: 0; }
+.note-body-input [data-note-check][data-checked="true"] > [data-check-text] { text-decoration: line-through; color: var(--text-muted); }
+.note-body-input[contenteditable="true"][data-empty="true"]::before { content: attr(data-placeholder); position: absolute; color: #929bad; pointer-events: none; }
+.note-body-input[aria-disabled="true"] { color: var(--text-muted); cursor: default; }
+.note-format-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 18px; border-bottom: 1px solid #edf0f7; flex-shrink: 0; }
+.note-format-toolbar label, .note-format-toolbar > span { font-size: 0.7rem; color: var(--text-muted); }
+.note-format-toolbar select { width: auto; min-width: 140px; padding: 6px 9px; font-size: 0.76rem; }
+#note-bold-btn { width: 31px; height: 31px; border: 1px solid #dce2ef; border-radius: 6px; background: #fff; color: var(--text-primary); cursor: pointer; }
+#note-bold-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+#note-bold-btn:disabled { opacity: .4; cursor: default; }
+.note-editor input:focus, .note-editor .note-body-input:focus { outline: 2px solid #b9c2f0; outline-offset: -2px; }
 .note-editor-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 5px; padding: 9px 18px; border-top: 1px solid #edf0f7; color: var(--text-muted); font-size: 0.66rem; }
 @media (max-width: 900px) {
   .notes-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: 130px minmax(0, 1fr); }
@@ -2125,7 +2147,9 @@ body.has-background .view-progress { background: rgb(249 250 255 / 82%); border-
   .note-list-item { width: 175px; padding: 7px 9px; }
   .note-list-item small { display: none; }
   .note-editor input.note-title-input { padding: 13px 15px 7px; font-size: 1.05rem; }
-  .note-editor textarea.note-body-input { padding: 7px 15px 15px; }
+  .note-editor .note-body-input { padding: 7px 15px 15px; }
+  .note-format-toolbar { padding: 6px 12px; gap: 6px; }
+  .note-format-toolbar > span { display: none; }
   .note-editor-toolbar { padding: 9px 12px; }
 }
 @media (max-width: 600px) {

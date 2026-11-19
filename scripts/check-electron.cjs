@@ -43,13 +43,42 @@ if (!process.versions.electron) {
     await window.webContents.executeJavaScript(`(() => {
       document.getElementById('notes-nav-link').click();document.getElementById('new-note-btn').click();
       document.getElementById('note-title-input').value='Ghi chú Electron';
-      const input=document.getElementById('note-body-input');input.value='Tiếng Việt\\n\\tGiữ khoảng trắng  ';input.dispatchEvent(new Event('input',{bubbles:true}));
+      const input=document.getElementById('note-body-input');input.replaceChildren(document.createTextNode('Tiếng Việt\\n\\tGiữ khoảng trắng  '));input.dispatchEvent(new Event('input',{bubbles:true}));
     })()`);
     // Reload immediately while the debounce is pending: beforeunload must save.
     const notesReload = new Promise(resolve => window.webContents.once('did-finish-load', resolve));
     window.webContents.reload(); await notesReload;
-    const notesSaved = await window.webContents.executeJavaScript(`(() => {document.getElementById('notes-nav-link').click();return document.getElementById('note-body-input').value==='Tiếng Việt\\n\\tGiữ khoảng trắng  ';})()`);
+    const notesSaved = await window.webContents.executeJavaScript(`(() => {document.getElementById('notes-nav-link').click();return JSON.parse(localStorage.getItem(PlannerNotesStore.KEY)).notes[0].body==='Tiếng Việt\\n\\tGiữ khoảng trắng  ';})()`);
     if (!notesSaved) throw new Error('Pending notes did not persist through Electron reload.');
+    await window.webContents.executeJavaScript(`(() => {
+      document.getElementById('new-note-btn').click();const editor=document.getElementById('note-body-input');
+      PlannerRichText.render(editor,PlannerRichText.fromPlain('Tiêu đề\\nNội dung'));
+      editor.focus();const range=document.createRange();range.selectNodeContents(editor.lastElementChild);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);
+    })()`);
+    window.webContents.focus();
+    window.webContents.sendInputEvent({type:'keyDown',keyCode:'B',modifiers:['control']});
+    window.webContents.sendInputEvent({type:'keyUp',keyCode:'B',modifiers:['control']});
+    const boldWorked=await window.webContents.executeJavaScript(`Boolean(document.querySelector('#note-body-input b,#note-body-input strong'))`);
+    if(!boldWorked)throw new Error('Actual Electron Ctrl+B did not bold text');
+    await window.webContents.executeJavaScript(`(() => {
+      const editor=document.getElementById('note-body-input');const range=document.createRange();range.selectNodeContents(editor.firstElementChild);getSelection().removeAllRanges();getSelection().addRange(range);document.dispatchEvent(new Event('selectionchange'));
+      const select=document.getElementById('note-block-format');select.value='h1';select.dispatchEvent(new Event('change'));document.getElementById('save-note-btn').click();
+    })()`);
+    const richReload=new Promise(resolve=>window.webContents.once('did-finish-load',resolve));window.webContents.reload();await richReload;
+    const richSaved=await window.webContents.executeJavaScript(`(() => {document.getElementById('notes-nav-link').click();return document.querySelector('#note-body-input h1')?.textContent==='Tiêu đề'&&document.querySelector('#note-body-input strong')?.textContent==='Nội dung';})()`);
+    if(!richSaved)throw new Error('Rich headings/bold did not persist in Electron');
+      await window.webContents.executeJavaScript(`(() => {
+        const editor=document.getElementById('note-body-input');editor.focus();const range=document.createRange();range.selectNodeContents(editor.lastElementChild);range.collapse(false);getSelection().removeAllRanges();getSelection().addRange(range);document.dispatchEvent(new Event('selectionchange'));
+        document.getElementById('note-checklist-btn').click();document.querySelector('#note-body-input input[type="checkbox"]').click();
+        editor.focus();
+      })()`);
+      window.webContents.sendInputEvent({type:'keyDown',keyCode:'Return'});window.webContents.sendInputEvent({type:'keyUp',keyCode:'Return'});
+      await window.webContents.insertText('Mục tiếp theo');
+      const checklistWorked=await window.webContents.executeJavaScript(`(() => {document.getElementById('save-note-btn').click();const blocks=JSON.parse(localStorage.getItem(PlannerNotesStore.KEY)).notes[0].content.blocks;return blocks.length===3&&blocks[1].checked===true&&blocks[2].checked===false&&blocks[2].runs.map(run=>run.text).join('')==='Mục tiếp theo';})()`);
+      if(!checklistWorked)throw new Error('Real Electron checklist Enter/typing failed');
+      const checklistReload=new Promise(resolve=>window.webContents.once('did-finish-load',resolve));window.webContents.reload();await checklistReload;
+      const checklistSaved=await window.webContents.executeJavaScript(`(() => {document.getElementById('notes-nav-link').click();const boxes=document.querySelectorAll('#note-body-input input[type="checkbox"]');return boxes.length===2&&boxes[0].checked&&!boxes[1].checked;})()`);
+      if(!checklistSaved)throw new Error('Checklist state did not persist in Electron');
     const bridge = await window.webContents.executeJavaScript(`({node:typeof require,process:typeof process,chat:typeof window.plannerDesktop.chat,hust:typeof window.plannerDesktop.hust.connect})`);
     if(bridge.node!=='undefined'||bridge.process!=='undefined'||bridge.chat!=='undefined'||bridge.hust!=='function')throw new Error('Secure desktop bridge failed: '+JSON.stringify(bridge));
     let networkRequests=0;
@@ -67,7 +96,7 @@ if (!process.versions.electron) {
       if(document.getElementById('cb-status').classList.contains('error'))throw new Error('Offline summary failed');
     })()`);
     if(networkRequests)throw new Error('Local chatbot attempted '+networkRequests+' network requests');
-    console.log('PASS: Electron isolation/preload, migration, photo, notes, actual offline chatbot tasks/notes/summary and zero network requests.');
+      console.log('PASS: Electron isolation/preload, migration, photo, notes, actual Ctrl+B/headings and checklist Enter/typing across reload, offline chatbot and zero network requests.');
     console.log('Isolated profile: ' + profile);
     app.quit();
   }).catch(error => { console.error(error.stack || error); app.exit(1); });

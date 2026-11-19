@@ -50,11 +50,15 @@ Mã chính: `planner-store.js` (dữ liệu và lặp lại), `app.js` (giao di�
 
 ## Ghi chú
 
-Mở **Ghi chú** trên thanh bên → **Ghi chú mới** để viết văn bản thuần như Notepad. Mỗi ghi chú có tiêu đề và nội dung riêng; ô tìm kiếm tìm cả hai. App tự lưu sau khi ngừng gõ 250 ms, khi chuyển trang và trước khi đóng. Có thể bấm **Lưu** hoặc **Ctrl+S** để lưu ngay. Trạng thái **Đã lưu trên máy** chỉ hiện khi ghi thành công; nếu lỗi bộ nhớ, nội dung đang sửa được giữ trong ô soạn thảo để thử lại hoặc xuất TXT.
+**Checklist trong ghi chú:** đặt con trỏ ở một dòng (hoặc chọn nhiều dòng), bấm **☑ Checklist** để chuyển thành các mục có ô tích. Bấm lại để về văn bản thường. **Enter** tạo mục mới chưa tích; Enter ở mục trống kết thúc checklist. Có thể tô đậm nội dung từng mục; trạng thái tích được tự lưu cùng ghi chú. Xuất TXT và chatbot đọc được trạng thái qua `[ ]` / `[x]`. Trước lần lưu checklist đầu tiên, app giữ nguyên dữ liệu ghi chú tại `planner_notes_before_checklist_v1`; nếu sao lưu thất bại thì không ghi đè bản cũ.
 
-**Xuất TXT** lưu nội dung đang mở thành file UTF-8, giữ tiếng Việt, xuống dòng và khoảng trắng. **Xóa** cần xác nhận và lưu bản dữ liệu trước lần xóa gần nhất tại `planner_notes_before_delete_v1`. Các ghi chú dùng khóa `planner_notes_v1` riêng, không thay đổi công việc hay lịch học. Khi sao lưu đầy đủ, copy toàn bộ `%APPDATA%\todolist` để giữ cả ghi chú và ảnh nền; các bản sao JSON công việc trước khi đồng bộ HUST chỉ chứa dữ liệu công việc.
+Mở **Ghi chú** trên thanh bên → **Ghi chú mới** để soạn nội dung. Bôi đen chữ rồi bấm **Ctrl+B** hoặc nút **B** để bật/tắt chữ đậm; cũng có thể bật đậm trước khi gõ. Menu **Kiểu chữ** có Văn bản thường, Tiêu đề 1, Tiêu đề 2, Tiêu đề 3, áp dụng cho đoạn đang đặt con trỏ hoặc được chọn. Enter sau tiêu đề tạo đoạn văn thường; Shift+Enter xuống dòng trong cùng đoạn. Dán nội dung chỉ lấy văn bản để tránh chèn mã/trang web vào ghi chú.
 
-Mã liên quan: `notes-store.js` (lưu dữ liệu), `notes.js` (soạn thảo và tự lưu).
+Mỗi ghi chú có tên và nội dung riêng; ô tìm kiếm tìm cả hai. App tự lưu cả định dạng sau khi ngừng gõ 250 ms, khi chuyển trang và trước khi đóng. Có thể bấm **Lưu** hoặc **Ctrl+S** để lưu ngay. Trạng thái **Đã lưu trên máy** chỉ hiện khi ghi thành công; nếu lỗi bộ nhớ, nội dung đang sửa được giữ để thử lại hoặc xuất TXT. Ghi chú cũ được mở nguyên văn, không diễn giải các ký tự như HTML. Lần đầu lưu ghi chú cũ với định dạng, app giữ nguyên bản dữ liệu trước đó tại `planner_notes_before_richtext_v1`; nếu không lưu được bản dự phòng thì chặn ghi thay vì mất bản cũ.
+
+**Xuất TXT** lưu văn bản UTF-8 đang mở, giữ tiếng Việt, xuống dòng và khoảng trắng; TXT không mang định dạng đậm/tiêu đề. **Xóa** cần xác nhận và lưu bản dữ liệu trước lần xóa gần nhất tại `planner_notes_before_delete_v1`. Ghi chú dùng khóa `planner_notes_v1` riêng: `body` là bản văn bản cho tìm kiếm/chatbot/TXT, `content` tùy chọn lưu cấu trúc đoạn và chữ đậm, không lưu HTML tùy ý. Không thay đổi công việc hay lịch học. Sao lưu đầy đủ bằng cách đóng app rồi copy toàn bộ `%APPDATA%\todolist` để giữ cả định dạng và ảnh nền; các bản sao JSON công việc trước khi đồng bộ HUST chỉ chứa dữ liệu công việc.
+
+Mã liên quan: `notes-store.js` (lưu dữ liệu), `notes.js` (soạn thảo và tự lưu), `notes-richtext.js` (cấu trúc, hiển thị và trích xuất văn bản).
 
 ## Chatbot
 

@@ -12,7 +12,7 @@ delete runtimeEnv.ELECTRON_RUN_AS_NODE;
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8').replace('<link rel="stylesheet" href="style.css" />', () => '<style>' + fs.readFileSync(path.join(root, 'style.css'), 'utf8') + '</style>');
 html = html.replace('<link rel="stylesheet" href="chatbot.css" />', () => '<style>' + fs.readFileSync(path.join(root, 'chatbot.css'), 'utf8') + '</style>');
 html = html.replaceAll('assets/chatbot-avatar.svg', 'data:image/svg+xml;base64,' + fs.readFileSync(path.join(root, 'assets', 'chatbot-avatar.svg')).toString('base64'));
-for (const name of ['planner-store.js', 'lunar.js', 'hust-ui.js', 'notes-store.js', 'notes.js', 'chatbot-core.js', 'chatbot-nlu.js', 'chatbot-model.js', 'chatbot-knowledge.js', 'chatbot-local.js', 'chatbot.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
+for (const name of ['planner-store.js', 'lunar.js', 'hust-ui.js', 'notes-richtext.js', 'notes-store.js', 'notes.js', 'chatbot-core.js', 'chatbot-nlu.js', 'chatbot-model.js', 'chatbot-knowledge.js', 'chatbot-local.js', 'chatbot.js', 'app.js', 'appearance.js']) html = html.replace(`<script src="${name}"></script>`, () => '<script>' + fs.readFileSync(path.join(root,name),'utf8') + '</script>');
 const initialize = `
 window.addEventListener('error',event=>parent.__errors.push(event.message));
 const RealDate=Date; window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:[RealDate.UTC(2026,10,11,5)]));}static now(){return RealDate.UTC(2026,10,11,5);}};
@@ -49,7 +49,8 @@ async function browserChecks(source, legacy) {
   const data=()=>JSON.parse(window.__storage.planner_data_v2);
   let doc;
   const click=selector=>{const el=doc.querySelector(selector);assert(el,'Missing '+selector);el.click();};
-  const value=(selector,text)=>{const el=doc.querySelector(selector);assert(el,'Missing '+selector);el.value=text;el.dispatchEvent(new frame.contentWindow.Event('input',{bubbles:true}));el.dispatchEvent(new frame.contentWindow.Event('change',{bubbles:true}));};
+  const value=(selector,text)=>{const el=doc.querySelector(selector);assert(el,'Missing '+selector);if(el.hasAttribute('contenteditable'))el.replaceChildren(doc.createTextNode(text));else el.value=text;el.dispatchEvent(new frame.contentWindow.Event('input',{bubbles:true}));el.dispatchEvent(new frame.contentWindow.Event('change',{bubbles:true}));};
+  const noteText=()=>frame.contentWindow.PlannerRichText.toPlain(frame.contentWindow.PlannerRichText.serialize(doc.querySelector('#note-body-input')));
   const checked=(selector,bool)=>{const el=doc.querySelector(selector);el.checked=bool;el.dispatchEvent(new frame.contentWindow.Event('change',{bubbles:true}));};
   const submit=()=>{doc.querySelector('#task-form').requestSubmit();assert(doc.querySelector('#task-modal').classList.contains('hidden'),'Save failed: '+doc.querySelector('#task-form-error').textContent);};
   const taskSelector=(taskId,container='')=>`${container} [data-task-id="${taskId}"]`;
@@ -257,13 +258,13 @@ async function browserChecks(source, legacy) {
     assert(JSON.parse(window.__storage.planner_notes_v1).notes.some(note=>note.body==='Lưu ngay khi chuyển trang'),'Leaving notes lost pending text');
     doc=await load();click('#notes-nav-link');value('#notes-search-input','khoảng trắng');
     assert(doc.querySelectorAll('.note-list-item').length===1&&doc.querySelector('.note-list-item').dataset.noteId===firstNote.id,'Notes search did not find body text');
-    click('.note-list-item');assert(doc.querySelector('#note-body-input').value===noteBody,'Note whitespace changed after reload');
+    click('.note-list-item');assert(noteText()===noteBody,'Note whitespace changed after reload');
     value('#notes-search-input','');
     const notesStorage=frame.contentWindow.localStorage,originalNotesSet=notesStorage.setItem.bind(notesStorage);
     notesStorage.setItem=(key,text)=>{if(key==='planner_notes_v1')throw new frame.contentWindow.DOMException('Full','QuotaExceededError');originalNotesSet(key,text);};
     value('#note-body-input',noteBody+'\nChưa lưu');click('#save-note-btn');
     assert(doc.querySelector('#note-save-status').classList.contains('error'),'Failed note save was reported as saved');
-    click('#new-note-btn');assert(doc.querySelector('#note-body-input').value.endsWith('Chưa lưu'),'Failed save discarded draft when creating another note');
+    click('#new-note-btn');assert(noteText().endsWith('Chưa lưu'),'Failed save discarded draft when creating another note');
     notesStorage.setItem=originalNotesSet;click('#save-note-btn');assert(!doc.querySelector('#note-save-status').classList.contains('error'),'Note save could not be retried');
     const originalAnchorClick=frame.contentWindow.HTMLAnchorElement.prototype.click;
     let exportedNote;
@@ -275,6 +276,74 @@ async function browserChecks(source, legacy) {
     assert(window.__storage.planner_notes_before_delete_v1===notesBeforeDelete,'Note deletion did not back up original content');
     assert(window.__storage.planner_data_v2===tasksBeforeNotes,'Notes changed calendar/task data');
     results.push('Notes autosave/reload, Unicode and whitespace, search, TXT export, failed save retry, deletion backup and calendar isolation');
+
+    click('#new-note-btn');value('#note-title-input','Kế hoạch có định dạng');
+    const richAPI=frame.contentWindow.PlannerRichText;
+    richAPI.render(doc.querySelector('#note-body-input'),richAPI.fromPlain('Kế hoạch\nNội dung quan trọng\nMục nhỏ\nChi tiết'));
+    function selectNoteText(selector,start,end){const element=doc.querySelector(selector);element.closest('[contenteditable]').focus();const range=doc.createRange();range.setStart(element.firstChild,start);range.setEnd(element.firstChild,end);const selection=frame.contentWindow.getSelection();selection.removeAllRanges();selection.addRange(range);doc.dispatchEvent(new frame.contentWindow.Event('selectionchange'));}
+    selectNoteText('#note-body-input p',0,8);value('#note-block-format','h1');assert(doc.querySelector('#note-body-input h1')?.textContent==='Kế hoạch','Heading 1 not applied');
+    selectNoteText('#note-body-input p',9,19);
+    doc.querySelector('#note-body-input').dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown',{key:'b',ctrlKey:true,bubbles:true,cancelable:true}));
+    assert(doc.querySelector('#note-body-input p b,#note-body-input p strong')?.textContent==='quan trọng','Ctrl+B did not bold selected text');
+    selectNoteText('#note-body-input p:nth-of-type(2)',0,7);value('#note-block-format','h2');
+    selectNoteText('#note-body-input p:last-child',0,8);value('#note-block-format','h3');
+    click('#save-note-btn');
+    const richSaved=JSON.parse(window.__storage.planner_notes_v1).notes[0];
+    assert(richSaved.content.blocks.map(block=>block.type).join(',')==='h1,p,h2,h3','Heading levels not persisted');
+    assert(richSaved.body==='Kế hoạch\nNội dung quan trọng\nMục nhỏ\nChi tiết','Formatting changed plain text');
+    assert(window.__storage.planner_notes_before_richtext_v1,'Missing backup before rich editing');
+    doc=await load();click('#notes-nav-link');assert(doc.querySelector('#note-body-input h1')?.textContent==='Kế hoạch'&&doc.querySelector('#note-body-input strong')?.textContent==='quan trọng','Rich content did not survive reload');
+    selectNoteText('#note-body-input strong',0,10);
+    const boldShortcut=()=>doc.querySelector('#note-body-input').dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown',{key:'b',ctrlKey:true,bubbles:true,cancelable:true}));
+    boldShortcut();assert(!doc.querySelector('#note-body-input strong,#note-body-input b'),'Ctrl+B did not remove bold');boldShortcut();assert(doc.querySelector('#note-body-input strong,#note-body-input b'),'Ctrl+B did not restore bold');
+    selectNoteText('#note-body-input h2',0,7);boldShortcut();click('#save-note-btn');
+    assert(JSON.parse(window.__storage.planner_notes_v1).notes[0].content.blocks.find(block=>block.type==='h2').runs.some(run=>run.normal),'Removing bold inside heading did not persist');
+    selectNoteText('#note-body-input h3',8,8);
+    doc.querySelector('#note-body-input').dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
+    doc.execCommand('insertText',false,'Dòng thường');click('#save-note-btn');
+    assert(doc.querySelector('#note-body-input p:last-child')?.textContent==='Dòng thường','Enter after heading did not return to paragraph');
+    boldShortcut();doc.execCommand('insertText',false,' Đậm');boldShortcut();doc.execCommand('insertText',false,' thường');click('#save-note-btn');
+    assert(doc.querySelector('#note-body-input p:last-child strong,#note-body-input p:last-child b')?.textContent.includes('Đậm'),'Ctrl+B did not format new typing');
+    const richPasteTransfer=new frame.contentWindow.DataTransfer();richPasteTransfer.setData('text/plain','<img src=x onerror=alert(1)>');richPasteTransfer.setData('text/html','<img src=x onerror=alert(1)>');
+    doc.querySelector('#note-body-input').dispatchEvent(new frame.contentWindow.ClipboardEvent('paste',{clipboardData:richPasteTransfer,bubbles:true,cancelable:true}));
+    assert(!doc.querySelector('#note-body-input img'),'HTML paste inserted executable markup');click('#save-note-btn');
+    const richBody=JSON.parse(window.__storage.planner_notes_v1).notes[0].body;
+    let richExport;frame.contentWindow.HTMLAnchorElement.prototype.click=function(){richExport=frame.contentWindow.fetch(this.href).then(response=>response.text());};
+    click('#export-note-btn');assert(await richExport===richBody,'Rich TXT export included markup or changed text');
+    results.push('Rich notes Ctrl+B, heading 1/2/3, persistent formatting, legacy backup, Enter continuation, safe paste and plain TXT');
+
+    click('#new-note-btn');value('#note-title-input','Checklist ghi chú');
+    richAPI.render(doc.querySelector('#note-body-input'),richAPI.fromPlain('Đọc sách\nNộp bài\nGhi nhớ'));
+    const checklistBefore=window.__storage.planner_notes_v1;
+    const checklistRange=doc.createRange();checklistRange.setStart(doc.querySelector('#note-body-input p').firstChild,0);checklistRange.setEnd(doc.querySelectorAll('#note-body-input p')[1].firstChild,7);
+    frame.contentWindow.getSelection().removeAllRanges();frame.contentWindow.getSelection().addRange(checklistRange);doc.dispatchEvent(new frame.contentWindow.Event('selectionchange'));
+    click('#note-checklist-btn');
+    assert(doc.querySelectorAll('#note-body-input [data-note-check]').length===2,'Checklist did not convert exactly selected lines');
+    click('#note-body-input input[type="checkbox"]');click('#save-note-btn');
+    assert(window.__storage.planner_notes_before_checklist_v1===checklistBefore,'Checklist did not back up original notes');
+    let checklistSaved=JSON.parse(window.__storage.planner_notes_v1).notes[0];
+    assert(checklistSaved.body==='[x] Đọc sách\n[ ] Nộp bài\nGhi nhớ','Checklist text/status did not save');
+    doc=await load();click('#notes-nav-link');
+    assert(doc.querySelector('#note-body-input input').checked&&!doc.querySelectorAll('#note-body-input input')[1].checked,'Checkbox states lost on reload');
+    selectNoteText('#note-body-input [data-check-text]',0,8);boldShortcut();click('#save-note-btn');
+    assert(JSON.parse(window.__storage.planner_notes_v1).notes[0].content.blocks[0].runs[0].bold,'Checklist bold did not persist');
+    selectNoteText('#note-body-input [data-note-check]:nth-child(2) [data-check-text]',3,3);
+    const noteEnter=()=>doc.querySelector('#note-body-input').dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
+    noteEnter();click('#save-note-btn');
+    checklistSaved=JSON.parse(window.__storage.planner_notes_v1).notes[0];
+    assert(checklistSaved.body==='[x] Đọc sách\n[ ] Nộp\n[ ]  bài\nGhi nhớ','Enter did not split checklist at cursor');
+    selectNoteText('#note-body-input [data-note-check]:nth-child(3) [data-check-text]',4,4);noteEnter();noteEnter();click('#save-note-btn');
+    assert(doc.querySelectorAll('#note-body-input [data-note-check]').length===3&&doc.querySelector('#note-body-input p:nth-child(4)'),'Enter on empty checklist did not exit');
+    const checkedText=doc.querySelector('#note-body-input [data-check-text] strong,#note-body-input [data-check-text] b');
+    const uncheckRange=doc.createRange();uncheckRange.selectNodeContents(checkedText);frame.contentWindow.getSelection().removeAllRanges();frame.contentWindow.getSelection().addRange(uncheckRange);doc.dispatchEvent(new frame.contentWindow.Event('selectionchange'));
+    click('#note-checklist-btn');click('#save-note-btn');
+    assert(doc.querySelector('#note-body-input p strong,#note-body-input p b')?.textContent==='Đọc sách','Turning off checklist lost text/bold');
+    selectNoteText('#note-body-input [data-note-check] [data-check-text]',0,3);value('#note-block-format','h2');click('#save-note-btn');
+    assert(doc.querySelector('#note-body-input h2')?.textContent==='Nộp','Checklist-to-heading failed');
+    selectNoteText('#note-body-input [data-note-check] [data-check-text]',0,0);
+    doc.querySelector('#note-body-input').dispatchEvent(new frame.contentWindow.KeyboardEvent('keydown',{key:'Backspace',bubbles:true,cancelable:true}));click('#save-note-btn');
+    assert(!doc.querySelector('#note-body-input [data-note-check]')&&noteText().includes(' bài'),'Backspace at checklist start lost text');
+    results.push('Note checklist selected lines, checkbox persistence, exact backup, bold, Enter split/exit and conversion back to text/headings');
 
     doc=await load();click('#cb-launcher');
     const originalChatFetch=frame.contentWindow.fetch;
@@ -294,7 +363,7 @@ async function browserChecks(source, legacy) {
     const noteCount=JSON.parse(window.__storage.planner_notes_v1).notes.length;
     const accepts=doc.querySelectorAll('.cb-accept');accepts[accepts.length-1].click();
     assert(JSON.parse(window.__storage.planner_notes_v1).notes.length===noteCount+1,'Confirmed note not created');
-    assert(doc.querySelector('#note-body-input').value===chatNoteBody,'Chat note lost text');
+    assert(noteText()===chatNoteBody,'Chat note lost text');
     await sendChat('Tìm ghi chú Ghi từ chatbot');assert(doc.querySelector('#cb-messages').textContent.includes(chatNoteBody),'Local note retrieval failed');
     await sendChat('Tạo lịch họp nhóm');assert(doc.querySelector('#cb-messages').lastElementChild.textContent.includes('ngày nào'),'Missing date was guessed');
     await sendChat('ngày mai');await sendChat('7 giờ tối');
@@ -417,6 +486,19 @@ else{
         {id:'note-preview-1',title:'Ý tưởng cho tuần mới',body:'Mỗi ngày một chút tiến bộ.\n\nCẦN GHI NHỚ\n• Hoàn thiện báo cáo dự án\n• Chuẩn bị nội dung buổi họp nhóm\n• Dành 30 phút đọc sách\n\nÝ tưởng mới\nGhi lại ngay khi nghĩ ra, sắp xếp lại sau.',created_at:'2026-11-18T00:00:00Z',updated_at:'2026-11-18T00:15:00Z'},
         {id:'note-preview-2',title:'Ghi nhanh sau buổi họp',body:'Các ý chính và bước tiếp theo của nhóm.',created_at:'2026-11-17T00:00:00Z',updated_at:'2026-11-17T02:30:00Z'}
       ]});
+      if(view==='notes') {
+        const notes=JSON.parse(previewStorage.planner_notes_v1),rich=require('../notes-richtext');
+        notes.notes[0].body+='\n\nBước tiếp theo\nBắt đầu từ một việc nhỏ mỗi ngày.';
+        notes.notes[0].content=rich.fromPlain(notes.notes[0].body);
+        for(const block of notes.notes[0].content.blocks){
+          const text=block.runs.map(run=>run.text).join('');
+          if(text==='CẦN GHI NHỚ')block.type='h1';if(text==='Ý tưởng mới')block.type='h2';if(text==='Bước tiếp theo')block.type='h3';
+          if(text==='Mỗi ngày một chút tiến bộ.')block.runs=[{text:'Mỗi ngày ',bold:false},{text:'một chút tiến bộ.',bold:true}];
+          if(text.startsWith('• ')){block.type='check';block.checked=text.includes('báo cáo');block.runs=[{text:text.slice(2),bold:false}];}
+        }
+        notes.notes[0].body=rich.toPlain(notes.notes[0].content);
+        previewStorage.planner_notes_v1=JSON.stringify(notes);
+      }
       if(view==='hust-calendar'){
         const schoolData=JSON.parse(previewStorage.planner_data_v2);
         [['Đại số','2026-11-09','15:05','17:30','D3-301'],['Công nghệ phần mềm','2026-11-10','06:45','10:05','D9-201'],['Khoa học dữ liệu','2026-11-11','15:05','17:30','TC-301'],['Học máy','2026-11-12','06:45','10:05','D9-101'],['Học bù tự thêm','2026-11-11','18:00','20:30','Online'],['Thuật toán ứng dụng','2026-11-13','12:30','14:00','D5-101']].forEach(([title,task_date,time,end_time,location],index)=>schoolData.tasks.push({id:'school-preview-'+index,title,task_date,time,end_time,location,tag:'Study',calendar_id:'hust',...(index===4?{}:{source:{provider:'hust',term:'20261',class_id:'12345'+index}})}));
